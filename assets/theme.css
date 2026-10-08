@@ -1,0 +1,49 @@
+@import "tailwindcss";
+
+/*
+ * Every color in the side panel lives here, and only here.
+ * Components use the named roles through utilities such as `bg-primary`,
+ * `text-on-primary`, `bg-surface`, `border-border` and `text-accent`.
+ *
+ * Light: white with navy accents.   Dark: deep navy / charcoal.
+ * The dark set overrides the SAME names, so no component changes between themes.
+ */
+@theme {
+  --color-primary: #ffffff;
+  --color-on-primary: #0f1b3d;
+  --color-surface: #eef2fb;
+  --color-on-surface: #33426b;
+  --color-accent: #1d3a8a;
+  --color-on-accent: #ffffff;
+  --color-border: #d3dbef;
+
+  --font-sans: system-ui, sans-serif;
+}
+
+/* Follows the operating system / browser setting. There is no in-panel toggle. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-primary: #0c1224;
+    --color-on-primary: #eaf0ff;
+    --color-surface: #161f3a;
+    --color-on-surface: #aab8de;
+    --color-accent: #7c9cff;
+    --color-on-accent: #0c1224;
+    --color-border: #28365e;
+  }
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background-color: var(--color-primary);
+  color: var(--color-on-primary);
+  font-family: var(--font-sans);
+  /* Make native bits (scrollbars) follow the theme too. */
+  color-scheme: light dark;
+}

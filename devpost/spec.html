@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Local Voice Reader — Technical Spec (review)</title>
+<meta name="description" content="Visual review of the technical blueprint for Local Voice Reader: architecture, core journey, components and file structure.">
+<style>
+  :root{--bg:#0b1226;--surface:#121b36;--surface2:#18234a;--text:#e8ecf8;--muted:#9aa6c9;--accent:#6ea8ff;--accent2:#ffd86b;--ok:#5fe3a1;--border:#26335f;--r:14px}
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(1200px 600px at 80% -10%,#1a2a5e 0,transparent 60%),var(--bg);color:var(--text);font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  main{max-width:980px;margin:0 auto;padding:40px 22px 90px}
+  h1{font-size:2.1rem;margin:0 0 6px;letter-spacing:-.02em}
+  h2{margin:48px 0 14px;font-size:1.35rem;border-bottom:1px solid var(--border);padding-bottom:8px}
+  h3{margin:0 0 6px;font-size:1.02rem}
+  p{margin:.5em 0}
+  .sub{color:var(--muted);margin-bottom:18px}
+  .badge{display:inline-block;font-size:.72rem;padding:2px 10px;border-radius:99px;background:#3a2f12;color:var(--accent2);border:1px solid #6b5518;vertical-align:middle;margin-left:8px}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:18px 20px}
+  .grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+  .piece{border-top:3px solid var(--accent)}
+  .piece:nth-child(2){border-color:var(--accent2)}
+  .piece:nth-child(3){border-color:var(--ok)}
+  code{background:#0a1030;border:1px solid var(--border);padding:1px 6px;border-radius:6px;font-size:.88em;color:#c9d7ff}
+  a{color:var(--accent)}
+  svg{width:100%;height:auto;display:block}
+  .diagram{padding:10px}
+  .stepper{display:grid;grid-template-columns:260px 1fr;gap:16px}
+  @media(max-width:760px){.stepper{grid-template-columns:1fr}}
+  .steps{display:flex;flex-direction:column;gap:6px}
+  .steps button{all:unset;cursor:pointer;padding:9px 12px;border-radius:10px;border:1px solid var(--border);background:var(--surface);font-size:.9rem;transition:.15s}
+  .steps button:hover{border-color:var(--accent)}
+  .steps button[aria-selected="true"]{background:var(--surface2);border-color:var(--accent);box-shadow:0 0 0 2px #6ea8ff33}
+  .steps button:focus-visible{outline:2px solid var(--accent2)}
+  .panel{min-height:230px}
+  .tag{display:inline-block;font-size:.75rem;margin:4px 6px 0 0;padding:2px 9px;border-radius:99px;border:1px solid var(--border);color:var(--muted)}
+  .tag b{color:var(--accent2);font-weight:600}
+  details{background:var(--surface);border:1px solid var(--border);border-radius:12px;margin:8px 0;padding:2px 16px}
+  details[open]{border-color:var(--accent)}
+  summary{cursor:pointer;padding:12px 0;font-weight:600;list-style:none}
+  summary::before{content:"▸";display:inline-block;margin-right:8px;color:var(--accent);transition:.15s}
+  details[open] summary::before{transform:rotate(90deg)}
+  details p{color:#cdd6f1}
+  table{width:100%;border-collapse:collapse;font-size:.92rem}
+  th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--border);vertical-align:top}
+  th{color:var(--muted);font-weight:600}
+  pre{background:#0a1030;border:1px solid var(--border);padding:16px;border-radius:12px;overflow:auto;font-size:.84rem;line-height:1.5;color:#c9d7ff}
+  .rec{color:var(--accent2)}
+  .ok{color:var(--ok)}
+  ul{padding-left:1.2em}
+  li{margin:.3em 0}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Local Voice Reader <span class="badge">spec · approved</span></h1>
+    <p class="sub">The blueprint for how we'll build what your PRD describes. Markdown (<code>spec.md</code>) is the canonical version; this page is a visual companion and works offline.</p>
+  </header>
+
+  <h2>How this works, in plain language</h2>
+  <div class="grid">
+    <section class="card piece">
+      <h3>1 · Background script — the doorman</h3>
+      <p>Adds <b>Read Aloud</b> to the right-click menu. On click it opens the side panel, injects the content script, and saves the sentences for the panel.</p>
+      <p><code>entrypoints/background.ts</code></p>
+    </section>
+    <section class="card piece">
+      <h3>2 · Content script — the page hand</h3>
+      <p>The only piece that touches the web page. It finds your selection, cuts it into sentences, remembers where each sits, and paints the highlight.</p>
+      <p><code>entrypoints/reader.content.ts</code></p>
+    </section>
+    <section class="card piece">
+      <h3>3 · Side panel — the music player</h3>
+      <p>React app. Owns the Kokoro voice, makes audio sentence by sentence, plays it, and tells the page which sentence to highlight.</p>
+      <p><code>entrypoints/sidepanel/</code></p>
+    </section>
+  </div>
+  <p class="sub" style="margin-top:14px">Privacy: the text travels page → background → panel → voice model, all inside your browser. The only network call is the one-time model download.</p>
+
+  <h2>Architecture &amp; data flow</h2>
+  <div class="card diagram">
+    <svg viewBox="0 0 900 400" role="img" aria-label="Architecture diagram: web page, background script, side panel with voice worker, and Hugging Face model download">
+      <defs>
+        <marker id="ar" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#6ea8ff"/></marker>
+        <marker id="ar2" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#ffd86b"/></marker>
+      </defs>
+      <style>
+        .b{fill:#121b36;stroke:#26335f;stroke-width:1.5}
+        .t{fill:#e8ecf8;font:600 14px system-ui,sans-serif}
+        .s{fill:#9aa6c9;font:12px system-ui,sans-serif}
+        .l{stroke:#6ea8ff;stroke-width:2;fill:none;marker-end:url(#ar)}
+        .l2{stroke:#ffd86b;stroke-width:2;fill:none;stroke-dasharray:6 5;marker-end:url(#ar2)}
+      </style>
+      <rect class="b" x="20" y="30" width="230" height="170" rx="14"/>
+      <text class="t" x="40" y="58">Web page (any site)</text>
+      <rect x="40" y="72" width="190" height="42" rx="8" fill="#18234a" stroke="#ffd86b"/>
+      <text class="s" x="52" y="90">Content script</text>
+      <text class="s" x="52" y="106">selection → chunks · highlight</text>
+      <text class="s" x="40" y="140">Highlight uses CSS Custom</text>
+      <text class="s" x="40" y="156">Highlight API (no HTML edits)</text>
+
+      <rect class="b" x="340" y="30" width="200" height="110" rx="14"/>
+      <text class="t" x="360" y="58">Background script</text>
+      <text class="s" x="360" y="80">right-click menu</text>
+      <text class="s" x="360" y="98">opens panel · injects script</text>
+      <text class="s" x="360" y="116">saves chunks → storage.session</text>
+
+      <rect class="b" x="640" y="30" width="240" height="250" rx="14"/>
+      <text class="t" x="660" y="58">Side panel (React)</text>
+      <text class="s" x="660" y="80">status · now reading · controls</text>
+      <rect x="660" y="95" width="200" height="62" rx="8" fill="#18234a" stroke="#5fe3a1"/>
+      <text class="s" x="672" y="116">Player + look-ahead queue</text>
+      <text class="s" x="672" y="134">&lt;audio&gt; playback · speed</text>
+      <rect x="660" y="172" width="200" height="62" rx="8" fill="#18234a" stroke="#6ea8ff"/>
+      <text class="s" x="672" y="193">Voice worker (Kokoro q8, WASM)</text>
+      <text class="s" x="672" y="211">sentence → audio</text>
+      <text class="s" x="660" y="262">Model cached in browser Cache API</text>
+
+      <rect class="b" x="640" y="320" width="240" height="60" rx="14" style="stroke-dasharray:5 4"/>
+      <text class="t" x="660" y="346">Hugging Face (one time)</text>
+      <text class="s" x="660" y="364">~92 MB model download</text>
+
+      <path class="l" d="M250 85 L340 85"/><text class="s" x="258" y="76">chunks</text>
+      <path class="l" d="M540 85 L640 85"/><text class="s" x="548" y="76">session</text>
+      <path class="l2" d="M640 250 C500 300 330 260 160 200"/><text class="s" x="330" y="294">highlight(index) · clear</text>
+      <path class="l" d="M760 157 L760 172"/>
+      <path class="l2" d="M760 280 L760 320"/>
+    </svg>
+  </div>
+
+  <h2>The core journey through the system</h2>
+  <p class="sub">Click a step to see what happens, where, and which PRD section it serves.</p>
+  <div class="stepper" id="stepper">
+    <div class="steps" id="steps" role="tablist" aria-label="Journey steps"></div>
+    <div class="card panel" id="detail" role="tabpanel" aria-live="polite"></div>
+  </div>
+
+  <h2>Stack <span class="badge">unverified items flagged</span></h2>
+  <div class="card" style="overflow:auto">
+    <table>
+      <tr><th>Piece</th><th>Choice</th><th>Why / tradeoff</th></tr>
+      <tr><td>Framework</td><td><a href="https://wxt.dev/">WXT</a> (~v0.21)</td><td>Your choice. Chromium + Firefox from one codebase. Replaces the CRXJS starter.</td></tr>
+      <tr><td>UI</td><td>React + TypeScript</td><td>Your choice. You know it; the panel has several states.</td></tr>
+      <tr><td>Styling</td><td><a href="https://tailwindcss.com/docs/theme">Tailwind v4</a> <span class="rec">(recommended)</span></td><td>From your starter. <code>@theme</code> gives the named roles the PRD requires.</td></tr>
+      <tr><td>Voice</td><td><a href="https://github.com/hexgrad/kokoro/tree/main/kokoro.js">Kokoro-82M via kokoro-js</a></td><td>Your choice. ~92 MB at q8, one-time download. Slower on weak CPUs.</td></tr>
+      <tr><td>Speed &amp; playback</td><td><code>&lt;audio&gt;</code> + <code>playbackRate</code> <span class="rec">(recommended)</span></td><td>Instant speed change, pitch preserved. Gaps between sentences need care.</td></tr>
+      <tr><td>Highlight</td><td><a href="https://developer.mozilla.org/en-US/docs/Web/API/CSS_Custom_Highlight_API">CSS Custom Highlight API</a></td><td>No changes to page HTML. Needs Firefox 140+ (verify).</td></tr>
+      <tr><td>Tests</td><td><a href="https://wxt.dev/guide/essentials/unit-testing">Vitest</a> <span class="rec">(optional)</span></td><td>For chunker, queue, and error mapping.</td></tr>
+    </table>
+  </div>
+
+  <h2>Components <span class="badge">click to expand</span></h2>
+  <details open><summary>Background script <code>entrypoints/background.ts</code></summary><p>Creates the Read Aloud item (only when text is selected). On click: opens the panel first and synchronously (browsers require it), injects the content script via <code>activeTab</code>, asks it for chunks, saves them to <code>storage.session</code>.</p><p class="tag"><b>PRD</b> Triggering a reading</p></details>
+  <details><summary>Content script <code>entrypoints/reader.content.ts</code></summary><p>Injected only on demand, never on every site. Splits the selection with <code>Intl.Segmenter</code>, builds a page Range per chunk, answers <code>highlight(i)</code> / <code>clear</code>, and clears the highlight if the panel's connection drops.</p><p class="tag"><b>PRD</b> Sentence-by-sentence reading and highlighting</p></details>
+  <details><summary>Chunker <code>lib/chunker.ts</code></summary><p>Pure functions: sentences → chunks of one or two sentences (very short ones merge with the next). No browser APIs, so it is easy to test.</p><p class="tag"><b>PRD</b> Sentence-by-sentence reading and highlighting</p></details>
+  <details><summary>Voice worker + client <code>lib/tts.worker.ts</code>, <code>lib/tts-client.ts</code></summary><p>The worker loads Kokoro once (<code>q8</code>, WASM, single thread) and generates audio per chunk. The client reports download progress and maps failures to the two PRD error messages.</p><p class="tag"><b>PRD</b> States and Boundaries</p></details>
+  <details><summary>Player + look-ahead queue <code>lib/player.ts</code></summary><p>Keeps ~4–5 chunks generating ahead, plays them back-to-back, exposes play / pause / resume / setSpeed / stop, calls highlight on each chunk start, and discards results from an old <code>readingId</code>.</p><p class="tag"><b>PRD</b> Play/Pause</p><p class="tag"><b>PRD</b> Speed</p></details>
+  <details><summary>Side panel UI <code>entrypoints/sidepanel/</code></summary><p>StatusBar, NowReading, PlayerControls (Speed · Play/Pause · Voice), shared Popup, SpeedPopup (0.25x–2x slider), VoicePopup (one voice), Toast ("Playing").</p><p class="tag"><b>PRD</b> Screens and Layout</p><p class="tag"><b>PRD</b> Voice</p></details>
+  <details><summary>Theme <code>assets/theme.css</code></summary><p>Named roles (<code>bg-primary</code>, <code>on-primary</code>, surface, accent, border…) defined once for light (white + navy) and dark. Follows the OS setting; no in-panel toggle.</p><p class="tag"><b>PRD</b> Theme</p></details>
+
+  <h2>Where data lives</h2>
+  <div class="card" style="overflow:auto">
+    <table>
+      <tr><th>Data</th><th>Where</th><th>When you come back</th></tr>
+      <tr><td>Voice model (~92 MB)</td><td>Browser Cache API</td><td class="ok">Still there — no re-download</td></tr>
+      <tr><td>Pending reading (chunks, tab id)</td><td><code>storage.session</code> (memory only)</td><td>Cleared when the browser closes</td></tr>
+      <tr><td>Reading state, speed, voice</td><td>React state in the panel</td><td>Resets (speed back to 1x)</td></tr>
+      <tr><td>Chunk page ranges</td><td>Content script memory</td><td>Gone on page reload</td></tr>
+    </table>
+  </div>
+
+  <h2>File structure</h2>
+<pre>Listen/
+├── entrypoints/
+│   ├── background.ts          # menu, open panel, inject script, save pending reading
+│   ├── reader.content.ts      # selection → chunks, page highlight (on demand)
+│   └── sidepanel/
+│       ├── index.html  main.tsx  App.tsx
+│       └── components/        # StatusBar, NowReading, PlayerControls,
+│                              # Popup, SpeedPopup, VoicePopup, Toast, icons
+├── lib/
+│   ├── messages.ts  chunker.ts  errors.ts  voices.ts
+│   ├── tts.worker.ts  tts-client.ts  player.ts
+├── assets/theme.css           # Tailwind v4 + named color roles (light/dark)
+├── public/ort/                # onnxruntime .wasm served locally (no CDN)
+├── tests/                     # Vitest: chunker, queue, errors
+├── devpost/
+├── wxt.config.ts  package.json  tsconfig.json  README.md</pre>
+
+  <h2>Where it runs &amp; how to try it</h2>
+  <div class="card">
+    <ul>
+      <li><code>npm run dev</code> → Chromium with the extension loaded · <code>npm run dev:firefox</code> → Firefox.</li>
+      <li><code>npm run build</code> / <code>npm run build:firefox</code> → loadable folders in <code>.output/</code>.</li>
+      <li><b>Demo video:</b> record in Chrome (assumed): select Reddit text → Read Aloud → download message (cache cleared) → moving highlight → speed → pause/resume.</li>
+      <li>Submission = short demo video + public GitHub repo with a README. No deployment planned.</li>
+    </ul>
+  </div>
+
+  <h2>Failure modes</h2>
+  <div class="card">
+    <ul>
+      <li><b>Offline during download</b> → "You seem to be offline, check connection".</li>
+      <li><b>Model load/generation fails</b> → "Encounter some error, while fetching voice".</li>
+      <li><b>Slow CPU</b> → play button stays in buffering; the player waits rather than skipping.</li>
+      <li><b>Selection can't be mapped to the page</b> → it is still read aloud; that chunk simply isn't highlighted.</li>
+      <li><b>Page can't be scripted</b> (browser pages, stores) → error message, nothing plays.</li>
+    </ul>
+  </div>
+
+  <h2>Open items to check</h2>
+  <div class="card">
+    <ul>
+      <li><b>Your question:</b> how one codebase serves two browsers → WXT writes each manifest; only the "open panel" line branches. Proof: build step 1 loads the same empty panel in both browsers.</li>
+      <li class="rec">Needs your OK: Tailwind + Vitest + system font; q8/WASM only; on-demand content script; <code>&lt;audio&gt;</code> playback.</li>
+      <li>Assumed, not decided: demo in Chrome · theme follows the OS (no toggle) · placeholder highlight color · closing the panel stops reading (test in Firefox).</li>
+      <li>Verify early: Node version · WXT Firefox sidebar · model in a worker · 0.25x playbackRate · Hugging Face download from an extension page · Firefox 140+ highlight support.</li>
+    </ul>
+  </div>
+</main>
+
+<script>
+(function(){
+  var steps=[
+    {t:"Select text → right-click → Read Aloud",w:"Background script",p:"Triggering a reading",d:"The context-menu handler fires. The menu item only appears when text is selected."},
+    {t:"Open the side panel",w:"Background script",p:"Triggering a reading",d:"Called immediately, inside the click (browsers require it). Chromium: sidePanel.open. Firefox: sidebarAction.open. This is the only line that differs per browser."},
+    {t:"Inject the content script",w:"Background → page",p:"Triggering a reading",d:"Allowed because of the click (activeTab). The script is not running on pages you never use it on."},
+    {t:"Selection → sentences → chunks",w:"Content script + chunker",p:"Sentence-by-sentence reading and highlighting",d:"Intl.Segmenter splits the text. Chunks of 1–2 sentences each get a page Range so they can be highlighted later."},
+    {t:"Hand the chunks to the panel",w:"Background → storage.session",p:"Triggering a reading",d:"The panel may not be loaded yet, so chunks go into short-lived memory storage with a readingId and tab id. The panel reads it on open and on change."},
+    {t:"Download the voice (first time only)",w:"Voice worker",p:"States and Boundaries",d:"If the model isn't in the Cache API, the top of the panel shows “Downloading the voice ....”. Offline → “You seem to be offline, check connection”."},
+    {t:"Buffer, then play",w:"Player + worker",p:"Play/Pause",d:"Chunk 1 is generated first, then the next ~4–5 ahead. The button shows buffering until chunk 1 is ready; then the “Playing” toast and the pause icon."},
+    {t:"Highlight and advance",w:"Player → content script",p:"Sentence-by-sentence reading and highlighting",d:"When a chunk starts, the panel sends highlight(i). When it ends, the next one plays at once and the highlight moves. Generation keeps the buffer full."},
+    {t:"Pause, speed, voice",w:"Side panel UI",p:"Speed · Voice · Play/Pause",d:"All act directly on the panel's player. Speed (0.25x–2x) changes playbackRate on current and queued audio with no regeneration."},
+    {t:"End of text",w:"Player → content script",p:"States and Boundaries",d:"After the last chunk the voice stops and the highlight is cleared."},
+    {t:"New selection mid-reading",w:"Background + player",p:"Triggering a reading",d:"The same steps repeat with a new readingId. The panel drops the old queue and ignores late audio for the old id."},
+    {t:"Panel closes",w:"Panel ↔ content script connection",p:"States and Boundaries (assumption)",d:"The panel keeps a connection open to the page. When it closes, the content script clears the highlight and the reading ends. To be tested in Firefox."}
+  ];
+  var list=document.getElementById("steps"),det=document.getElementById("detail");
+  function show(i){
+    var s=steps[i];
+    Array.prototype.forEach.call(list.children,function(b,j){b.setAttribute("aria-selected",j===i?"true":"false")});
+    det.innerHTML="";
+    var h=document.createElement("h3");h.textContent=(i+1)+". "+s.t;
+    var p=document.createElement("p");p.textContent=s.d;
+    var a=document.createElement("span");a.className="tag";a.innerHTML="<b>Where</b> ";a.appendChild(document.createTextNode(s.w));
+    var b=document.createElement("span");b.className="tag";b.innerHTML="<b>PRD</b> ";b.appendChild(document.createTextNode(s.p));
+    det.appendChild(h);det.appendChild(p);det.appendChild(a);det.appendChild(b);
+  }
+  steps.forEach(function(s,i){
+    var b=document.createElement("button");
+    b.setAttribute("role","tab");b.textContent=(i+1)+". "+s.t;
+    b.addEventListener("click",function(){show(i)});
+    list.appendChild(b);
+  });
+  show(0);
+})();
+</script>
+</body>
+</html>

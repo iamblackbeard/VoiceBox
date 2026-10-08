@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PRD: Local Voice Reader</title>
+<style>
+  :root{
+    --bg-primary:#ffffff; --bg-surface:#f3f5fb; --on-primary:#0b1f4d;
+    --accent:#1b3a8a; --muted:#5a6785; --border:#d7ddee;
+    --good:#0f8a5f; --warn:#b7791f; --bad:#c0392b;
+    --font:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  body.dark{
+    --bg-primary:#0d1226; --bg-surface:#161d3a; --on-primary:#eaf0ff;
+    --accent:#8fb0ff; --muted:#9aa7c9; --border:#2a3463;
+    --good:#4cd6a0; --warn:#f0b55a; --bad:#ff7b6b;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:var(--font);background:var(--bg-primary);color:var(--on-primary);line-height:1.55;transition:background .25s,color .25s}
+  .wrap{max-width:900px;margin:0 auto;padding:32px 20px 80px}
+  header{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
+  h1{margin:0 0 6px;font-size:1.9rem}
+  h2{margin:36px 0 12px;font-size:1.25rem;border-bottom:2px solid var(--border);padding-bottom:6px}
+  p.lead{color:var(--muted);margin:0;max-width:640px}
+  button{font-family:inherit;cursor:pointer}
+  .theme-btn{background:var(--bg-surface);color:var(--on-primary);border:1px solid var(--border);border-radius:999px;padding:8px 16px;font-weight:600}
+  .card{background:var(--bg-surface);border:1px solid var(--border);border-radius:12px;padding:18px 20px;margin:12px 0}
+  .expand{background:var(--bg-surface);border:1px solid var(--border);border-radius:12px;margin:10px 0;overflow:hidden}
+  .expand>button{width:100%;text-align:left;background:none;border:none;color:var(--on-primary);padding:14px 18px;font-weight:600;font-size:1rem;display:flex;justify-content:space-between}
+  .expand>button:hover{background:rgba(127,127,127,.08)}
+  .expand .body{max-height:0;overflow:hidden;padding:0 18px;transition:max-height .3s ease,padding .3s ease}
+  .expand.open .body{max-height:900px;padding:4px 18px 16px}
+  ul{padding-left:20px;margin:6px 0} li{margin:5px 0}
+  .tag{font-size:.72rem;font-weight:700;text-transform:uppercase;border-radius:6px;padding:2px 8px;margin-right:8px}
+  .t-build{background:rgba(15,138,95,.18);color:var(--good)}
+  .t-defer{background:rgba(183,121,31,.2);color:var(--warn)}
+  .t-no{background:rgba(192,57,43,.18);color:var(--bad)}
+
+  /* journey stepper */
+  .journey{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+  .step-btn{background:var(--bg-surface);color:var(--on-primary);border:1px solid var(--border);border-radius:10px;padding:8px 12px;font-size:.85rem}
+  .step-btn.active{background:var(--accent);color:var(--bg-primary);border-color:var(--accent)}
+  .step-detail{min-height:70px}
+
+  /* mock side panel */
+  .mock{max-width:320px;margin:16px auto;background:var(--bg-primary);border:2px solid var(--border);border-radius:20px;padding:18px;position:relative}
+  .mock .status{font-size:.8rem;color:var(--accent);min-height:20px;font-weight:600;text-align:center}
+  .mock .text{background:var(--bg-surface);border-radius:12px;padding:14px;font-size:.9rem;min-height:110px}
+  .mock mark{background:var(--accent);color:var(--bg-primary);border-radius:4px;padding:1px 3px}
+  .controls{display:flex;align-items:center;justify-content:center;gap:18px;margin-top:18px;position:relative}
+  .rbtn{width:48px;height:48px;border-radius:50%;border:2px solid var(--accent);background:var(--bg-surface);color:var(--on-primary);font-weight:700;font-size:.75rem}
+  .rbtn.big{width:64px;height:64px;background:var(--accent);color:var(--bg-primary);font-size:1.3rem}
+  .popup{position:absolute;bottom:78px;background:var(--bg-primary);border:1px solid var(--border);border-radius:12px;padding:12px;font-size:.8rem;width:150px;display:none;box-shadow:0 6px 18px rgba(0,0,0,.2)}
+  .popup.show{display:block}
+  .popup.left{left:-4px} .popup.right{right:-4px}
+  .toast{position:absolute;top:-14px;left:50%;transform:translateX(-50%);background:var(--on-primary);color:var(--bg-primary);padding:4px 12px;border-radius:999px;font-size:.75rem;opacity:0;transition:opacity .3s}
+  .toast.show{opacity:1}
+  .states{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:10px}
+  .state-btn{background:var(--bg-surface);color:var(--on-primary);border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:.78rem}
+  .state-btn.active{border-color:var(--accent);outline:2px solid var(--accent)}
+  pre.fallback{background:var(--bg-surface);border:1px dashed var(--border);border-radius:10px;padding:12px;white-space:pre-wrap;font-size:.85rem}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Local Voice Reader</h1>
+      <p class="lead">Select text, right-click <b>Read Aloud</b>, and hear it in a natural local voice with the current sentence highlighted. Nothing leaves your machine.</p>
+    </div>
+    <button class="theme-btn" id="themeToggle" aria-label="Toggle theme">Toggle dark / light</button>
+  </header>
+
+  <div class="card"><b>What the scope said:</b> "Side panel with basic playback controls." <b>What we know now:</b> three round buttons, popups for speed and voice, exact messages for download and errors, and what happens at the end and on a new selection.</div>
+
+  <h2>The Core Journey</h2>
+  <p style="color:var(--muted);margin-top:0">Click a step to see what the user sees.</p>
+  <div class="journey" id="journey"></div>
+  <div class="card step-detail" id="stepDetail"></div>
+
+  <h2>Journey Diagram</h2>
+  <div class="card">
+    <svg viewBox="0 0 860 170" width="100%" role="img" aria-label="Journey: select text, right-click, side panel opens, download if first time, buffering, playing with highlight, end stops; new selection replaces">
+      <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker></defs>
+      <g fill="none" stroke="currentColor" stroke-width="1.5" color="#5a6785" font-family="sans-serif" font-size="13">
+        <rect x="10" y="20" width="110" height="48" rx="10" fill="#1b3a8a" stroke="none"/>
+        <rect x="150" y="20" width="110" height="48" rx="10"/>
+        <rect x="290" y="20" width="120" height="48" rx="10"/>
+        <rect x="440" y="20" width="110" height="48" rx="10"/>
+        <rect x="580" y="20" width="110" height="48" rx="10" fill="#1b3a8a" stroke="none"/>
+        <rect x="720" y="20" width="120" height="48" rx="10"/>
+        <path d="M120 44H150" marker-end="url(#ar)"/><path d="M260 44H290" marker-end="url(#ar)"/>
+        <path d="M410 44H440" marker-end="url(#ar)"/><path d="M550 44H580" marker-end="url(#ar)"/>
+        <path d="M690 44H720" marker-end="url(#ar)"/>
+        <path d="M640 68V120H65V68" stroke-dasharray="5 4" marker-end="url(#ar)"/>
+        <rect x="290" y="95" width="120" height="48" rx="10" stroke="#c0392b"/>
+        <path d="M350 68V95" stroke="#c0392b" stroke-dasharray="3 3" marker-end="url(#ar)"/>
+      </g>
+      <g font-family="sans-serif" font-size="12" text-anchor="middle">
+        <text x="65" y="48" fill="#fff">Select text</text>
+        <text x="205" y="48" fill="currentColor" color="#5a6785">Right-click</text>
+        <text x="350" y="48" fill="currentColor">Panel opens</text>
+        <text x="495" y="48" fill="currentColor">Buffering</text>
+        <text x="635" y="48" fill="#fff">Playing + highlight</text>
+        <text x="780" y="48" fill="currentColor">End: stops</text>
+        <text x="350" y="123" fill="#c0392b">Download / error msg</text>
+        <text x="350" y="160" fill="#5a6785">New selection replaces the old reading (dashed)</text>
+      </g>
+    </svg>
+  </div>
+
+  <h2>Try the Side Panel</h2>
+  <p style="color:var(--muted);margin-top:0">A clickable mock-up. Pick a state, then try the buttons.</p>
+  <div class="states" id="states"></div>
+  <div class="mock" id="mock">
+    <div class="status" id="status"></div>
+    <div class="text" id="mockText"></div>
+    <div class="controls">
+      <div class="toast" id="toast">Playing</div>
+      <div class="popup left" id="speedPop">Speed <b id="speedVal">1.0x</b><br><input type="range" id="speedRange" min="0.25" max="2" step="0.25" value="1" style="width:100%"></div>
+      <button class="rbtn" id="speedBtn" aria-label="Speed">Speed</button>
+      <button class="rbtn big" id="playBtn" aria-label="Play or pause">&#9654;</button>
+      <button class="rbtn" id="voiceBtn" aria-label="Voice">Voice</button>
+      <div class="popup right" id="voicePop"><b>Voices</b><br><label><input type="radio" checked> English (default)</label></div>
+    </div>
+  </div>
+
+  <h2>Features and Acceptance Criteria</h2>
+  <div class="expand open"><button>Triggering a reading <span>&minus;</span></button><div class="body"><ul>
+    <li>With text selected, the right-click menu shows <b>Read Aloud</b>.</li>
+    <li>Choosing it opens the side panel and starts the reading flow.</li>
+    <li>Choosing it on different text mid-reading replaces the old reading.</li></ul></div></div>
+  <div class="expand"><button>Sentence-by-sentence reading and highlighting <span>+</span></button><div class="body"><ul>
+    <li>The sentence being heard is the one highlighted on the page.</li>
+    <li>When a sentence ends, the highlight moves on with no noticeable audio gap.</li>
+    <li>When the reading ends, the highlight is cleared.</li></ul></div></div>
+  <div class="expand"><button>Play / Pause <span>+</span></button><div class="body"><ul>
+    <li>Buffering state while audio is prepared.</li>
+    <li>Pause icon while playing; pressing it pauses.</li>
+    <li>Play icon while paused; pressing it resumes where it paused.</li></ul></div></div>
+  <div class="expand"><button>Speed <span>+</span></button><div class="body"><ul>
+    <li>Clicking Speed opens a slider popup above the button.</li>
+    <li>0.25x is audibly slower; 2x is audibly faster.</li></ul></div></div>
+  <div class="expand"><button>Voice <span>+</span></button><div class="body"><ul>
+    <li>Clicking Voice opens a list popup above the button.</li>
+    <li>The single available voice is shown and selected.</li></ul></div></div>
+  <div class="expand"><button>Theme <span>+</span></button><div class="body"><ul>
+    <li>Light (white and navy) and dark themes switch via named color roles, no hardcoded colors.</li></ul></div></div>
+
+  <h2>States and Boundaries</h2>
+  <div class="expand open"><button>First use: voice not yet downloaded <span>&minus;</span></button><div class="body">Top of the panel shows "Downloading the voice ....". Playback starts after the download.</div></div>
+  <div class="expand"><button>Later uses: voice already downloaded <span>+</span></button><div class="body">No download message. Only the brief buffering state and the "Playing" toast.</div></div>
+  <div class="expand"><button>Network error <span>+</span></button><div class="body">"You seem to be offline, check connection"</div></div>
+  <div class="expand"><button>Voice error <span>+</span></button><div class="body">"Encounter some error, while fetching voice"</div></div>
+  <div class="expand"><button>End of text / new selection <span>+</span></button><div class="body">The voice stops after the last sentence and the highlight clears. A new selection replaces the current reading.</div></div>
+
+  <h2>The Boundary</h2>
+  <div class="card">
+    <p><span class="tag t-build">Building</span>Right-click Read Aloud, music-player side panel, local voice with first-run download, sentence reading with look-ahead, on-page highlight, Play/Pause, Speed, Voice popup, light/dark themes, status and error messages.</p>
+    <p><span class="tag t-defer">Deferred</span>Skip / rewind / forward, separate Stop button, more voices, reader mode.</p>
+    <p><span class="tag t-no">Non-goals</span>Cloud text-to-speech, accounts or sync, bundling the voice inside the extension.</p>
+  </div>
+
+  <h2>Open Questions</h2>
+  <ul>
+    <li>Final product name (working title: "Local Voice Reader").</li>
+    <li>Page highlight color, dark-theme colors, and default theme.</li>
+    <li>Assumed: menu item only shows when text is selected; download message only on first use; closing the panel stops reading.</li>
+  </ul>
+</div>
+
+<script>
+  document.getElementById('themeToggle').onclick=()=>document.body.classList.toggle('dark');
+  document.querySelectorAll('.expand>button').forEach(b=>b.onclick=()=>{
+    const e=b.parentElement;e.classList.toggle('open');
+    b.querySelector('span').innerHTML=e.classList.contains('open')?'&minus;':'+';
+  });
+
+  const steps=[
+    ['1. Select','The user selects a block of text on a webpage.'],
+    ['2. Right-click','They right-click and choose <b>Read Aloud</b>.'],
+    ['3. Panel opens','The side panel opens. On first use, the top shows "Downloading the voice ....".'],
+    ['4. Buffering','The play button shows a buffering state and a "Playing" toast appears.'],
+    ['5. Voice plays','The button becomes pause. The current sentence is highlighted on the page and moves with the voice.'],
+    ['6. Controls','Pause/resume, change speed (0.25x to 2x) or change voice from the popups.'],
+    ['7. End','After the last sentence the voice stops and the highlight clears.'],
+    ['8. New selection','Selecting new text and choosing Read Aloud replaces the old reading.']
+  ];
+  const jb=document.getElementById('journey'),sd=document.getElementById('stepDetail');
+  steps.forEach((s,i)=>{const b=document.createElement('button');b.className='step-btn';b.textContent=s[0];
+    b.onclick=()=>{jb.querySelectorAll('.step-btn').forEach(x=>x.classList.remove('active'));b.classList.add('active');sd.innerHTML=s[1];};
+    jb.appendChild(b);if(i===0)b.click();});
+
+  // mock panel
+  const text='Selected text appears at the top. <mark>This sentence is being read right now.</mark> The next sentence is already prepared. Then the reading moves on.';
+  const plain='Selected text appears at the top. This sentence is being read right now. The next sentence is already prepared. Then the reading moves on.';
+  const status=document.getElementById('status'),mt=document.getElementById('mockText'),pb=document.getElementById('playBtn'),toast=document.getElementById('toast');
+  const modes={
+    'First use':()=>{status.textContent='Downloading the voice ....';mt.textContent=plain;pb.innerHTML='&#8987;'},
+    'Buffering':()=>{status.textContent='';mt.textContent=plain;pb.innerHTML='&#8987;';toast.classList.add('show');setTimeout(()=>toast.classList.remove('show'),1800)},
+    'Playing':()=>{status.textContent='';mt.innerHTML=text;pb.innerHTML='&#10074;&#10074;'},
+    'Paused':()=>{status.textContent='';mt.innerHTML=text;pb.innerHTML='&#9654;'},
+    'Offline error':()=>{status.textContent='You seem to be offline, check connection';mt.textContent=plain;pb.innerHTML='&#9654;'},
+    'Voice error':()=>{status.textContent='Encounter some error, while fetching voice';mt.textContent=plain;pb.innerHTML='&#9654;'}
+  };
+  const st=document.getElementById('states');
+  Object.keys(modes).forEach((k,i)=>{const b=document.createElement('button');b.className='state-btn';b.textContent=k;
+    b.onclick=()=>{st.querySelectorAll('.state-btn').forEach(x=>x.classList.remove('active'));b.classList.add('active');modes[k]()};
+    st.appendChild(b);if(k==='Playing')b.click();});
+  pb.onclick=()=>{const playing=pb.innerHTML.includes('10074');pb.innerHTML=playing?'&#9654;':'&#10074;&#10074;'};
+  const sp=document.getElementById('speedPop'),vp=document.getElementById('voicePop');
+  document.getElementById('speedBtn').onclick=()=>{vp.classList.remove('show');sp.classList.toggle('show')};
+  document.getElementById('voiceBtn').onclick=()=>{sp.classList.remove('show');vp.classList.toggle('show')};
+  document.getElementById('speedRange').oninput=e=>document.getElementById('speedVal').textContent=Number(e.target.value).toFixed(2).replace(/0$/,'')+'x';
+</script>
+<noscript><pre class="fallback">Journey: select text, right-click Read Aloud, side panel opens (first use: "Downloading the voice ...."), buffering, playing with sentence highlight, end stops. A new selection replaces the old reading. Errors: "You seem to be offline, check connection" / "Encounter some error, while fetching voice".</pre></noscript>
+</body>
+</html>
