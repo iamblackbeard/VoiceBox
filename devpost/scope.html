@@ -4,216 +4,249 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Scope: Local Voice Reader</title>
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+    </script>
     <style>
         :root {
-            --primary: #4F46E5;
             --bg-color: #0f172a;
-            --text-color: #f8fafc;
-            --panel-bg: #1e293b;
+            --text-color: #e2e8f0;
+            --accent-color: #3b82f6;
+            --accent-hover: #60a5fa;
+            --card-bg: #1e293b;
             --border-color: #334155;
-            --accent: #10b981;
-            --accent-cut: #ef4444;
-            --accent-later: #f59e0b;
+            --warning-color: #f59e0b;
         }
+
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             background-color: var(--bg-color);
             color: var(--text-color);
             line-height: 1.6;
             margin: 0;
-            padding: 40px 20px;
-        }
-        .container {
-            max-width: 800px;
+            padding: 2rem;
+            max-width: 900px;
             margin: 0 auto;
         }
+
+        h1, h2, h3 {
+            color: #ffffff;
+            margin-top: 2rem;
+        }
+
         h1 {
-            color: var(--primary);
-            border-bottom: 2px solid var(--border-color);
-            padding-bottom: 10px;
+            font-size: 2.5rem;
+            border-bottom: 2px solid var(--accent-color);
+            padding-bottom: 0.5rem;
+            margin-bottom: 2rem;
         }
-        .card {
-            background-color: var(--panel-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 20px;
-            margin-bottom: 20px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+
+        .kernel {
+            background: linear-gradient(135deg, var(--card-bg) 0%, #172554 100%);
+            border: 1px solid var(--accent-color);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
-        .kernel-badge {
-            display: inline-block;
-            background-color: rgba(79, 70, 229, 0.2);
-            color: #818cf8;
-            padding: 4px 12px;
-            border-radius: 9999px;
-            font-size: 0.875rem;
-            font-weight: 600;
-            margin-bottom: 10px;
+
+        .kernel h2 {
+            margin-top: 0;
+            color: var(--accent-hover);
         }
-        
-        /* Mermaid Diagram Container */
+
         .diagram-container {
-            background-color: #ffffff; /* Keep white for mermaid visibility */
-            border-radius: 8px;
-            padding: 20px;
-            margin: 20px 0;
-            overflow-x: auto;
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 2rem 0;
+            border: 1px solid var(--border-color);
             text-align: center;
         }
-        
-        /* Accordion for Boundary */
-        .accordion {
-            background-color: var(--panel-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            overflow: hidden;
-            margin-top: 20px;
-        }
-        .accordion-item {
-            border-bottom: 1px solid var(--border-color);
-        }
-        .accordion-item:last-child {
-            border-bottom: none;
-        }
-        .accordion-header {
-            padding: 15px 20px;
-            cursor: pointer;
-            font-weight: bold;
+
+        .tabs {
             display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background-color: rgba(255,255,255,0.02);
+            gap: 1rem;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 1rem;
         }
-        .accordion-header:hover {
-            background-color: rgba(255,255,255,0.05);
+
+        .tab-btn {
+            background: transparent;
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.2s;
         }
-        .accordion-content {
-            padding: 0 20px;
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.3s ease-out, padding 0.3s ease;
+
+        .tab-btn:hover {
+            background: var(--card-bg);
         }
-        .accordion-content.active {
-            padding: 20px;
-            max-height: 500px;
+
+        .tab-btn.active {
+            background: var(--accent-color);
+            color: white;
+            border-color: var(--accent-color);
+        }
+
+        .tab-content {
+            display: none;
+            background: var(--card-bg);
+            padding: 1.5rem;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        ul {
+            padding-left: 1.5rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        .highlight {
+            color: var(--accent-hover);
+            font-weight: 600;
         }
         
-        /* Status Tags */
-        .tag {
-            padding: 3px 8px;
-            border-radius: 4px;
-            font-size: 0.75rem;
-            font-weight: bold;
-            text-transform: uppercase;
+        .warning-box {
+            background-color: rgba(245, 158, 11, 0.1);
+            border-left: 4px solid var(--warning-color);
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 0 8px 8px 0;
         }
-        .tag.now { background-color: rgba(16, 185, 129, 0.2); color: var(--accent); }
-        .tag.later { background-color: rgba(245, 158, 11, 0.2); color: var(--accent-later); }
-        .tag.cut { background-color: rgba(239, 68, 68, 0.2); color: var(--accent-cut); }
-        
-        ul { padding-left: 20px; }
-        li { margin-bottom: 8px; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Fallback for mermaid if JS fails */
+        .mermaid-fallback {
+            display: none;
+            border: 2px dashed var(--border-color);
+            padding: 2rem;
+            border-radius: 8px;
+            text-align: left;
+        }
+
+        .no-js .mermaid { display: none; }
+        .no-js .mermaid-fallback { display: block; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Local Voice Reader</h1>
-        <p>A privacy-first, local text-to-speech browser extension that reads selected web text aloud with natural AI voices.</p>
-        
-        <div class="card">
-            <div class="kernel-badge">The Kernel</div>
-            <p>Using local AI models for high-quality natural voices, while cleverly chunking the text sentence-by-sentence to provide synchronized sentence-level highlighting without complex audio-timing alignment.</p>
-        </div>
-        
-        <div class="diagram-container">
-            <!-- Mermaid script is loaded dynamically. Fallback text provided if CDN fails. -->
-            <pre class="mermaid">
-                graph LR
-                    A[User] -->|1. Select Text & Right-Click| B(Context Menu)
-                    B -->|2. "Read Aloud"| C{Sentence Chunker}
-                    C -->|3. Next Sentence| D[Local AI Model]
-                    D -->|4. Play Audio| E((Speaker))
-                    C -.->|5. Sync Highlight| F[Active Webpage]
-                    
-                    style A fill:#4F46E5,color:#fff
-                    style D fill:#10b981,color:#fff
-            </pre>
-            <noscript><p><em>(Mermaid diagram requires JavaScript/network access. Flow: User right-clicks text -> Chunker splits text -> Local AI reads next sentence -> Webpage highlights it.)</em></p></noscript>
-        </div>
+    <script>document.body.classList.remove('no-js');</script>
+    <noscript><style>.mermaid { display: none; } .mermaid-fallback { display: block; }</style></noscript>
 
-        <div class="accordion">
-            <div class="accordion-item">
-                <div class="accordion-header" onclick="toggleAccordion(this)">
-                    <div><span class="tag now">The POC Boundary (Now)</span></div>
-                    <span>+</span>
-                </div>
-                <div class="accordion-content">
-                    <ul>
-                        <li>Right-click context menu trigger for selected text only.</li>
-                        <li>Side panel with basic playback controls.</li>
-                        <li>Sentence chunking and look-ahead caching logic.</li>
-                        <li>Local AI TTS model integration (Transformers.js).</li>
-                        <li>Sentence-level highlighting on the active webpage.</li>
-                    </ul>
-                </div>
-            </div>
-            
-            <div class="accordion-item">
-                <div class="accordion-header" onclick="toggleAccordion(this)">
-                    <div><span class="tag later">Later</span></div>
-                    <span>+</span>
-                </div>
-                <div class="accordion-content">
-                    <ul>
-                        <li>Full-page "reader mode" that auto-parses main content.</li>
-                        <li>Importing custom open-source .tts voice files.</li>
-                        <li>Precise word-by-word highlighting.</li>
-                    </ul>
-                </div>
-            </div>
-            
-            <div class="accordion-item">
-                <div class="accordion-header" onclick="toggleAccordion(this)">
-                    <div><span class="tag cut">Explicitly Cut</span></div>
-                    <span>+</span>
-                </div>
-                <div class="accordion-content">
-                    <ul>
-                        <li>Cloud TTS API integrations (cut to enforce strict privacy).</li>
-                        <li>Bundling the AI model directly in the extension payload (cut due to Chrome Store limits; downloads on first run).</li>
-                    </ul>
-                </div>
-            </div>
+    <h1>Local Voice Reader</h1>
+
+    <div class="kernel">
+        <h2>The Unique Kernel</h2>
+        <p>Using local AI models for high-quality natural voices, while cleverly chunking the text sentence-by-sentence to provide synchronized sentence-level highlighting without complex audio-timing alignment. It features intelligent hardware acceleration detection (using <strong>WebGPU</strong> when available, falling back to <strong>WASM</strong>) and gives the user a choice between <span class="highlight">Kokoro</span> and <span class="highlight">Piper</span> models based on their hardware capabilities.</p>
+    </div>
+
+    <h2>Who It's For & Why</h2>
+    <p>Users who want to listen to long documents or Reddit posts to avoid screen fatigue, but are highly privacy-conscious and do not want their browsing context sent to external servers. It solves a personal need to reduce eye strain while refusing to compromise on data privacy.</p>
+
+    <div class="diagram-container">
+        <h3>The Core Loop</h3>
+        <div class="mermaid">
+            flowchart TD
+                subgraph Popup["Extension Popup (Configuration)"]
+                    P1([User Opens Popup]) --> P2{Check WebGPU}
+                    P2 -->|Available| P3[Select Engine]
+                    P2 -->|Missing| P4[Show Warning: "Wgpu not found, Piper is recommended"]
+                    P4 --> P3
+                    P3 -->|User Chooses Kokoro or Piper| P5[Save Configuration]
+                end
+                
+                subgraph Webpage["Webpage Context"]
+                    W1([User Selects text]) --> W2[Right-clicks & "Read Aloud"]
+                end
+                
+                subgraph SidePanel["Side Panel (Playback)"]
+                    W2 --> S1[Open Side Panel]
+                    S1 --> S2[Initialize Local Model]
+                    S2 --> S3[Read Aloud & Highlight Sentence]
+                    S3 --> S4[Pre-cache Next Sentences]
+                    S4 --> S3
+                end
+                
+                P5 -.-> W1
         </div>
-        
-        <div class="card" style="margin-top: 20px;">
-            <h3>What "Working" Looks Like</h3>
-            <p>A demo where a paragraph on a webpage (like Reddit) is selected, right-clicked, and read aloud by a natural-sounding voice. The screen visibly shows the current sentence highlighted, moving to the next sentence seamlessly as the voice continues.</p>
+        <div class="mermaid-fallback">
+            <strong>Core Loop Flow:</strong>
+            <ol>
+                <li>User configures engine in Extension Popup (Checking for WebGPU and selecting Kokoro/Piper)</li>
+                <li>User selects text on a webpage and right-clicks "Read Aloud"</li>
+                <li>Side panel opens for playback</li>
+                <li>Local AI model initializes</li>
+                <li>Extension reads text aloud, highlighting current sentence and caching upcoming ones</li>
+            </ol>
         </div>
     </div>
 
-    <script type="module">
-        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
-        mermaid.initialize({ startOnLoad: true, theme: 'default' });
-    </script>
+    <h2>Project Boundary</h2>
+    
+    <div class="tabs">
+        <button class="tab-btn active" onclick="showTab('now')">Now (POC)</button>
+        <button class="tab-btn" onclick="showTab('later')">Later</button>
+        <button class="tab-btn" onclick="showTab('cut')">Explicitly Cut</button>
+    </div>
+
+    <div id="now" class="tab-content active">
+        <h3>What "Working" Looks Like</h3>
+        <p>A demo where a user first selects their engine (Kokoro or Piper) in the extension popup, seeing a warning recommending Piper if WebGPU is disabled. Then, a paragraph on a webpage is selected, right-clicked, and read aloud. A side panel opens providing playback controls. The screen visibly shows the current sentence highlighted, moving to the next sentence seamlessly as the chosen local engine continues reading.</p>
+        
+        <h3>Included in Scope</h3>
+        <ul>
+            <li>Extension popup for engine selection (Kokoro vs Piper).</li>
+            <li>Hardware check for WebGPU in the popup, with a UI warning recommending Piper if missing.</li>
+            <li>Right-click context menu trigger for selected text only.</li>
+            <li>Side panel with basic playback controls and text display.</li>
+            <li>Sentence chunking and look-ahead caching logic.</li>
+            <li>Local AI TTS model integration (downloaded on first run and cached).</li>
+            <li>Sentence-level highlighting on the active webpage.</li>
+        </ul>
+    </div>
+
+    <div id="later" class="tab-content">
+        <h3>Future Additions</h3>
+        <ul>
+            <li>Full-page "reader mode" that automatically parses main content and ignores ads.</li>
+            <li>Importing custom open-source .tts voice files.</li>
+            <li>Precise word-by-word highlighting.</li>
+        </ul>
+    </div>
+
+    <div id="cut" class="tab-content">
+        <h3>Out of Scope</h3>
+        <ul>
+            <li>Cloud TTS API integrations (cut to enforce strict privacy).</li>
+            <li>Bundling the AI model directly in the extension payload (cut due to browser extension size limits).</li>
+        </ul>
+    </div>
 
     <script>
-        function toggleAccordion(element) {
-            const content = element.nextElementSibling;
-            const icon = element.querySelector('span:last-child');
+        function showTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
             
-            if (content.classList.contains('active')) {
-                content.classList.remove('active');
-                icon.textContent = '+';
-            } else {
-                content.classList.add('active');
-                icon.textContent = '-';
-            }
+            document.getElementById(tabId).classList.add('active');
+            event.target.classList.add('active');
         }
-        
-        document.addEventListener('DOMContentLoaded', () => {
-            const firstAccordion = document.querySelector('.accordion-header');
-            if (firstAccordion) toggleAccordion(firstAccordion);
-        });
     </script>
 </body>
 </html>
