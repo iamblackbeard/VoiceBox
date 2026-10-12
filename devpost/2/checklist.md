@@ -29,7 +29,7 @@ Build mode: learn
   Learner check: Run a test invocation with Piper selected; observe model download progress if first run, and verify the worker emits valid audio without crashing or keeping both engines resident.
   Commit: `Integrate Piper TTS in worker with single-engine memory management`
 
-- [ ] **3. Dual-engine reading through the shared player with sentence highlighting**
+- [x] **3. Dual-engine reading through the shared player with sentence highlighting**
   Becomes usable: Full end-to-end reading with Piper or Kokoro. Selecting text on any webpage and clicking Read Aloud reads using the configured engine from the popup. The shared player handles play/pause/buffering, sentences highlight on the webpage, and switching engines between readings cleanly unloads the old engine and starts the new one.
   Why now: Completes the full user journey: ties the popup preference, the worker engine, and the on-page player together into a unified experience without duplicate player code.
   PRD ref: `prd.md > The Core Journey`, `prd.md > Dual-Engine Audio Playback & Memory Management`, `prd.md > What We're Building`

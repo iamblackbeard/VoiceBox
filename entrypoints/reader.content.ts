@@ -8,6 +8,19 @@ let chunkRanges: Range[] = [];
 // Helper to extract all text nodes from a given Range
 function getTextNodesInRange(range: Range): TextNodeInfo[] {
   const nodes: TextNodeInfo[] = [];
+
+  // If selection is within a single text node, treeWalker won't visit its children (it has none).
+  if (range.commonAncestorContainer.nodeType === Node.TEXT_NODE) {
+    const node = range.commonAncestorContainer;
+    const text = node.textContent || '';
+    const startOffset = Math.max(0, range.startOffset);
+    const endOffset = Math.min(text.length, range.endOffset);
+    if (endOffset > startOffset) {
+      nodes.push({ node, length: endOffset - startOffset });
+    }
+    return nodes;
+  }
+
   const treeWalker = document.createTreeWalker(
     range.commonAncestorContainer,
     NodeFilter.SHOW_TEXT,
@@ -78,12 +91,25 @@ export default defineContentScript({
           
           if (selection && selection.rangeCount > 0) {
             const range = selection.getRangeAt(0);
+
+            // Ensure styles pierce shadow roots in browsers like Firefox
+            try {
+              const root = range.commonAncestorContainer.getRootNode();
+              if (root instanceof ShadowRoot && !root.querySelector('style[data-lvr-highlight]')) {
+                const styleEl = document.createElement('style');
+                styleEl.setAttribute('data-lvr-highlight', 'true');
+                styleEl.textContent = '::highlight(lvr-current) { background-color: rgba(255, 235, 59, 0.4); }';
+                root.appendChild(styleEl);
+              }
+            } catch (e) {}
+
             const nodes = getTextNodesInRange(range);
             
             let exactText = '';
             const mappedNodes: TextNodeInfo[] = [];
             
-            for (const n of nodes) {
+            for (let i = 0; i < nodes.length; i++) {
+              const n = nodes[i]!;
               let textContent = '';
               if (n.node === range.startContainer && n.node === range.endContainer) {
                 textContent = n.node.textContent!.substring(range.startOffset, range.endOffset);
@@ -99,12 +125,23 @@ export default defineContentScript({
                 exactText += textContent;
                 mappedNodes.push({ node: n.node, length: textContent.length });
                 
-                // Add a virtual space to ensure block-level elements aren't merged without spaces,
-                // which would break the Intl.Segmenter sentence boundaries.
-                const shouldAddSpace = !textContent.match(/\s$/);
-                if (shouldAddSpace) {
-                  exactText += ' ';
-                  mappedNodes.push({ node: null, length: 1 });
+                // Add a space between separate block-level containers if neither already has whitespace
+                if (i < nodes.length - 1 && !textContent.match(/\s$/)) {
+                  const nextNode = nodes[i + 1]!;
+                  const nextNodeText = (nextNode.node.textContent || '');
+                  let nextFirstChar = '';
+                  if (nextNode.node === range.endContainer && range.startContainer === range.endContainer) {
+                    nextFirstChar = nextNodeText.substring(range.startOffset, range.endOffset);
+                  } else if (nextNode.node === range.startContainer) {
+                    nextFirstChar = nextNodeText.substring(range.startOffset);
+                  } else {
+                    nextFirstChar = nextNodeText;
+                  }
+                  
+                  if (!nextFirstChar.match(/^\s/) && n.node.parentElement !== nextNode.node.parentElement) {
+                    exactText += ' ';
+                    mappedNodes.push({ node: null, length: 1 });
+                  }
                 }
               }
             }
@@ -112,7 +149,7 @@ export default defineContentScript({
             textToSend = exactText.trim();
             if (textToSend) {
               const chunks = chunkText(textToSend);
-              const rangesInfo = buildChunkRanges(chunks, mappedNodes, textToSend);
+              const rangesInfo = buildChunkRanges(chunks, mappedNodes, exactText);
               
               chunkRanges = rangesInfo.map(info => {
                 const r = document.createRange();
@@ -128,6 +165,10 @@ export default defineContentScript({
                 }
                 if (endNode === range.startContainer) {
                   endOffset += range.startOffset;
+                }
+
+                if (startNode === endNode && startOffset > endOffset) {
+                  endOffset = startOffset;
                 }
                 
                 r.setStart(startNode, startOffset);

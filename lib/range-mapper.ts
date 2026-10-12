@@ -10,61 +10,86 @@ export interface RangeInfo {
   endOffset: number;
 }
 
-export function mapOffsetToNode(nodes: TextNodeInfo[], offset: number): { node: any; offset: number } | null {
+export function mapOffsetToNode(
+  nodes: TextNodeInfo[],
+  offset: number,
+  isEnd: boolean = false
+): { node: any; offset: number } | null {
   let currentOffset = 0;
-  for (const info of nodes) {
-    if (offset < currentOffset + info.length || (offset === currentOffset + info.length && offset !== 0)) {
+  for (let i = 0; i < nodes.length; i++) {
+    const info = nodes[i]!;
+    const nextOffset = currentOffset + info.length;
+
+    if (offset < nextOffset) {
       return { node: info.node, offset: offset - currentOffset };
     }
-    // Edge case: if offset is 0 and the first node is empty, we should still return it.
-    if (offset === 0 && info.length === 0) {
-      return { node: info.node, offset: 0 };
+
+    if (offset === nextOffset) {
+      if (isEnd || i === nodes.length - 1) {
+        return { node: info.node, offset: info.length };
+      }
+      // If isEnd is false and there are subsequent nodes, continue so start falls on the next node at offset 0
     }
-    currentOffset += info.length;
+
+    currentOffset = nextOffset;
   }
-  
-  // If offset is exactly the total length, point to the end of the last node
+
   if (nodes.length > 0 && offset === currentOffset) {
-    const lastNode = nodes[nodes.length - 1];
-    return { node: lastNode!.node, offset: lastNode!.length };
+    const lastNode = nodes[nodes.length - 1]!;
+    return { node: lastNode.node, offset: lastNode.length };
   }
   return null;
 }
 
-export function buildChunkRanges(chunks: string[], nodes: TextNodeInfo[], exactText: string): RangeInfo[] {
+export function buildChunkRanges(
+  chunks: string[],
+  nodes: TextNodeInfo[],
+  exactText: string
+): RangeInfo[] {
   const ranges: RangeInfo[] = [];
   let currentOffset = 0;
-  
+
   for (const chunk of chunks) {
     let startOffset = exactText.indexOf(chunk, currentOffset);
-    if (startOffset === -1) continue; // Should not happen if exactText matches chunks
-    
-    let endOffset = startOffset + chunk.length;
-    
-    let start = mapOffsetToNode(nodes, startOffset);
-    // If we land on a virtual space node, snap forward to the next real node
-    while (start && start.node === null) {
-      startOffset++;
-      start = mapOffsetToNode(nodes, startOffset);
+    let chunkLen = chunk.length;
+
+    // Fallback: if exact chunk doesn't match directly, try trimmed chunk
+    if (startOffset === -1) {
+      const trimmed = chunk.trim();
+      startOffset = exactText.indexOf(trimmed, currentOffset);
+      if (startOffset !== -1) {
+        chunkLen = trimmed.length;
+      }
     }
 
-    let end = mapOffsetToNode(nodes, endOffset);
-    // If we land on a virtual space node, snap backward to the previous real node
-    while (end && end.node === null) {
-      endOffset--;
-      end = mapOffsetToNode(nodes, endOffset);
+    if (startOffset === -1) continue;
+
+    let endOffset = startOffset + chunkLen;
+    const nextSearchOffset = endOffset;
+
+    let start = mapOffsetToNode(nodes, startOffset, false);
+    while (start && start.node === null && startOffset < endOffset) {
+      startOffset++;
+      start = mapOffsetToNode(nodes, startOffset, false);
     }
-    
-    if (start && end) {
+
+    let end = mapOffsetToNode(nodes, endOffset, true);
+    while (end && end.node === null && endOffset > startOffset) {
+      endOffset--;
+      end = mapOffsetToNode(nodes, endOffset, true);
+    }
+
+    if (start && end && start.node && end.node) {
       ranges.push({
         startNode: start.node,
         startOffset: start.offset,
         endNode: end.node,
-        endOffset: end.offset
+        endOffset: end.offset,
       });
     }
-    currentOffset = endOffset;
+
+    currentOffset = nextSearchOffset;
   }
-  
+
   return ranges;
 }
