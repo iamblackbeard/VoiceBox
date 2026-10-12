@@ -14,12 +14,14 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@mintplex-labs/piper-tts-web": "^1.0.5",
     "kokoro-js": "^1.2.1",
     "onnxruntime-web": "^1.30.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
+    "@diffusionstudio/piper-wasm": "^1.0.0",
     "@tailwindcss/vite": "^4.3.3",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",

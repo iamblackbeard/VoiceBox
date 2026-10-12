@@ -9,7 +9,7 @@ Build mode: learn
 
 ## Slices
 
-- [ ] **1. Popup engine selector with cached WebGPU detection**
+- [x] **1. Popup engine selector with cached WebGPU detection**
   Becomes usable: Clicking the extension toolbar icon opens a styled popup in Chrome and Firefox. It tests for WebGPU capability, caches the result in `browser.storage.local`, shows the engine choice (Kokoro vs. Piper) with the WebGPU recommendation banner if missing, and saves engine clicks immediately.
   Why now: Establishes the user configuration entrypoint, the cross-browser storage schema, and the hardware check needed to dictate defaults before integrating the new engine.
   PRD ref: `prd.md > The Core Journey`, `prd.md > Engine Selection & Switching`, `prd.md > WebGPU Detection & Caching`, `prd.md > Screens and Layout`
@@ -19,7 +19,7 @@ Build mode: learn
   Learner check: Load the extension in Chrome or Firefox, click the toolbar icon to open the popup. Verify that WebGPU status is detected, the default engine is set, and clicking between Kokoro and Piper updates immediately without a save button.
   Commit: `Add extension popup with WebGPU detection and engine selection`
 
-- [ ] **2. Piper TTS synthesizes speech with worker memory management**
+- [x] **2. Piper TTS synthesizes speech with worker memory management**
   Becomes usable: The TTS worker can load Piper via WebAssembly/ONNX, synthesize speech for text chunks, report progress, and enforce mutual exclusion—unloading and disposing Kokoro before Piper loads (and vice-versa) so only one model resides in memory.
   Why now: This is the core technical risk: getting Piper's phonemizer and ONNX model downloading and synthesizing audio in the web worker alongside memory lifecycle guarantees.
   PRD ref: `prd.md > Dual-Engine Audio Playback & Memory Management`, `prd.md > States and Boundaries`, `prd.md > Product Decisions`
