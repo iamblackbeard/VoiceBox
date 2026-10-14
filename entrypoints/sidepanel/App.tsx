@@ -10,6 +10,7 @@ import { chunkText } from '@/lib/chunker';
 export default function App() {
   const [reading, setReading] = useState<PendingReading | null>(null);
   const [playerState, setPlayerState] = useState<PlayerState>({ status: 'idle', message: null });
+  const [speed, setSpeed] = useState(1.0);
 
   useEffect(() => {
     return player.subscribe(setPlayerState);
@@ -53,7 +54,7 @@ export default function App() {
       <h1 className="sr-only">Local Voice Reader</h1>
       <StatusBar message={playerState.message} />
       <NowReading text={reading?.text ?? null} />
-      <PlayerControls status={playerState.status} />
+      <PlayerControls status={playerState.status} speed={speed} onSpeedChange={setSpeed} />
       <Toast visible={playerState.status === 'playing'} />
     </main>
   );

@@ -56,6 +56,7 @@ export class Player {
   private client: TTSClient;
   private activeEngine: TTSEngine = 'kokoro';
   private currentAudioUrl: string | null = null;
+  private currentSpeed = 1.0;
 
   /**
    * Monotonically-increasing token. Incremented on every replace / stop /
@@ -349,6 +350,10 @@ export class Player {
       }
       this.currentAudioUrl = url;
       this.audioElement.src = url;
+      // Re-apply speed after setting new source
+      if (typeof this.audioElement.playbackRate !== 'undefined') {
+        this.audioElement.playbackRate = this.currentSpeed;
+      }
       return;
     }
 
@@ -359,6 +364,10 @@ export class Player {
     }
     this.currentAudioUrl = url;
     this.audioElement.src = url;
+    // Re-apply speed after setting new source
+    if (typeof this.audioElement.playbackRate !== 'undefined') {
+      this.audioElement.playbackRate = this.currentSpeed;
+    }
 
     if (this.audioElement.play) {
       await this.audioElement.play();
@@ -420,6 +429,7 @@ export class Player {
 
   /** Apply playback rate to the current audio element (speed slider, slice 5). */
   setSpeed(rate: number) {
+    this.currentSpeed = rate;
     if (this.audioElement && typeof this.audioElement.playbackRate !== 'undefined') {
       this.audioElement.playbackRate = rate;
     }

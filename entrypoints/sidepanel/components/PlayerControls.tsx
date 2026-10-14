@@ -1,13 +1,24 @@
+import { useState } from 'react';
 import { PlayIcon, SpeedIcon, VoiceIcon } from './icons';
 import { player, type PlayerStatus } from '@/lib/player';
+import Popup from './Popup';
+import SpeedPopup from './SpeedPopup';
 
 const side =
   'flex h-14 w-14 items-center justify-center rounded-full border border-border bg-surface text-on-surface transition disabled:cursor-not-allowed disabled:opacity-50';
 
+interface PlayerControlsProps {
+  status: PlayerStatus;
+  speed: number;
+  onSpeedChange: (speed: number) => void;
+}
+
 /**
  * The three round buttons: Speed (left), Play/Pause (middle, bigger), Voice (right).
  */
-export default function PlayerControls({ status }: { status: PlayerStatus }) {
+export default function PlayerControls({ status, speed, onSpeedChange }: PlayerControlsProps) {
+  const [speedPopupOpen, setSpeedPopupOpen] = useState(false);
+
   const isPlaying = status === 'playing';
   const isBuffering = status === 'downloading' || status === 'buffering';
   const isEnded = status === 'ended';
@@ -24,9 +35,24 @@ export default function PlayerControls({ status }: { status: PlayerStatus }) {
 
   return (
     <div className="flex items-center justify-center gap-6 pb-2">
-      <button id="speed-button" type="button" aria-label="Speed" disabled className={side}>
-        <SpeedIcon />
-      </button>
+      <div className="relative">
+        <button
+          id="speed-button"
+          type="button"
+          aria-label="Speed"
+          onClick={() => setSpeedPopupOpen(!speedPopupOpen)}
+          className={side}
+        >
+          <SpeedIcon />
+        </button>
+        <Popup
+          anchorId="speed-button"
+          visible={speedPopupOpen}
+          onClose={() => setSpeedPopupOpen(false)}
+        >
+          <SpeedPopup speed={speed} onSpeedChange={onSpeedChange} />
+        </Popup>
+      </div>
       <button
         id="play-button"
         type="button"
