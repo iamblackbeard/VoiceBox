@@ -39,34 +39,34 @@ Build mode: learn
   Learner check: Read a long paragraph on Reddit. Does the highlighted sentence match what you hear? Does it clear at the end, and when you close the panel? Try Firefox too.
   Commit: `Highlight the spoken sentence on the page`
 
-- [ ] **4. Playback is smooth, and a new selection replaces the old reading**
-  Becomes usable: Sentences play without noticeable gaps because the next 4–5 are prepared while one plays. Choosing Read Aloud on new text mid-reading stops the old reading and starts the new one.
+- [x] **4. Playback is smooth, and a new selection replaces the old reading**
+  Becomes usable: Sentences play without noticeable gaps because the next 4–5 are prepared while one plays. Choosing Read Aloud on new text mid-reading stops the old reading and starts the new one. Works for both Kokoro and Piper.
   Why now: Slices 2–3 prove the kernel works. This one makes it pleasant to use for a long post.
   PRD ref: `prd.md > Sentence-by-sentence reading and highlighting`, `prd.md > Triggering a reading`, `prd.md > Play/Pause`
   Spec ref: `spec.md > Components > Player and Look-ahead Queue`, `spec.md > Data Model`
-  Build: Add the look-ahead queue with a `readingId` so stale audio is dropped, hold in buffering when a chunk isn't ready, and handle the replacement of the reading on a new selection.
-  Verify (mechanical): Unit tests for the queue (look-ahead size, stale results ignored, waits when empty) pass; both builds succeed.
-  Learner check: Read a long post, and listen for pauses between sentences. Then select other text mid-reading and choose Read Aloud, and check that the old reading stops and the new one starts.
+  Build: Add the look-ahead queue with a `readingId` so stale audio is dropped regardless of which engine produced it, hold in buffering when a chunk isn't ready, and handle the replacement of the reading on a new selection. Ensure the queue teardown path calls the active engine's unload routine (already wired in the 2nd build) so stale Piper or Kokoro inference is cancelled cleanly.
+  Verify (mechanical): Unit tests for the queue (look-ahead size, stale results ignored, waits when empty, unload called on replace) pass; both builds succeed.
+  Learner check: Read a long post, and listen for pauses between sentences. Then select other text mid-reading and choose Read Aloud, and check that the old reading stops and the new one starts. Try it with both engines selected in the popup.
   Commit: `Add look-ahead queue and replace reading on new selection`
 
 - [ ] **5. You can change the speed and the voice from popups**
-  Becomes usable: The Speed button opens a slider popup (0.25x–2x) above it, and the Voice button opens a list popup with the one available voice.
+  Becomes usable: The Speed button opens a slider popup (0.25x–2x) above it, and the Voice button opens a list popup showing the available voices for the active engine (Kokoro voice or Piper voice, per the popup engine selector added in the 2nd build).
   Why now: These are the remaining controls in your music-player layout, and they act on the player that already works.
   PRD ref: `prd.md > Speed`, `prd.md > Voice`, `prd.md > Screens and Layout`
   Spec ref: `spec.md > Components > Side Panel UI`, `spec.md > Components > Player and Look-ahead Queue`
-  Build: Add the shared Popup, the Speed slider (applies `playbackRate` to the current and queued audio) and the Voice list. Make the voice list read from `lib/voices.ts` with one entry.
-  Verify (mechanical): Unit test that speed changes apply to current and queued audio; both builds succeed; no hardcoded colors in the new components (checked with a search).
-  Learner check: While it's reading, drag the speed to 0.25x and then 2x and listen for slower and faster speech without it turning squeaky or deep. Open the voice popup and check that it shows the single voice.
+  Build: Add the shared Popup and the Speed slider (applies `playbackRate` to the current and queued audio). For the Voice list, read from `lib/voices.ts` which now contains entries for both Kokoro and Piper (added in the 2nd build); filter the list to show only voices for the currently selected engine so the user isn't shown voices that don't match their engine choice.
+  Verify (mechanical): Unit test that speed changes apply to current and queued audio; unit test that the voice list filters correctly by active engine; both builds succeed; no hardcoded colors in the new components (checked with a search).
+  Learner check: While it's reading, drag the speed to 0.25x and then 2x and listen for slower and faster speech. Open the voice popup and confirm it shows only the voices that belong to the engine you have selected in the toolbar popup. Switch engine in the popup and reopen the voice list to confirm it updates.
   Commit: `Add speed and voice popups`
 
 - [ ] **6. Errors and edge cases behave as the PRD says, and the project is ready to try**
-  Becomes usable: Going offline on first use shows "You seem to be offline, check connection". Other failures show "Encounter some error, while fetching voice". Pages that can't be scripted fail politely. The README explains how to run, build and record the demo.
+  Becomes usable: Going offline on first use shows "You seem to be offline, check connection". Other failures show "Encounter some error, while fetching voice". Pages that can't be scripted fail politely. The README explains how to run, build, select an engine, and record the demo.
   Why now: This hardens what's built, and the README is needed for the submission.
   PRD ref: `prd.md > States and Boundaries`
   Spec ref: `spec.md > Important Failure Modes`, `spec.md > Where It Runs and How Someone Tries It`
-  Build: Finish the offline and generic error paths, the not-scriptable-page path, and the end-of-text and panel-close behavior in Firefox. Write the README with the run, build and demo steps.
-  Verify (mechanical): Unit tests for error mapping (offline vs. other) pass; both builds succeed; the README commands run as written.
-  Learner check: Clear the site data, go offline, and click Read Aloud, and read the message. Try it on a browser-internal page and see what happens.
+  Build: Finish the offline and generic error paths for both Kokoro and Piper model downloads (each can fail independently), the not-scriptable-page path, and the end-of-text and panel-close behavior in Firefox. Write the README with the run, build, and demo steps — include a section explaining the toolbar popup engine selector, the WebGPU recommendation, and which engine to pick on machines without WebGPU.
+  Verify (mechanical): Unit tests for error mapping (offline vs. other, for both engines) pass; both builds succeed; the README commands run as written.
+  Learner check: Clear the site data, go offline, and click Read Aloud — read the error message. Try it on a browser-internal page and see what happens. Also try switching engines in the popup while offline to confirm the error message still appears correctly.
   Commit: `Handle error states and add README`
 
 ## Hands-on Checkpoints
@@ -93,4 +93,4 @@ Activity mode: [live app and editor, explicit static fallback, focused alternati
 ## Revisions
 
 - Slice 1: WXT builds Firefox as Manifest V2 by default, which has no `scripting` API. Firefox scripts now use `--mv3` (`dev:firefox`, `build:firefox`); output is `.output/firefox-mv3/`. Also added `data_collection_permissions: none` for Firefox and `sidebarAction` is cast because WXT's types follow Chrome's API.
-
+- Slices 4–6 (amended after 2nd build): The 2nd build added Piper TTS, a dual-engine worker with single-engine memory management, and a toolbar popup engine selector. Slices 4, 5, and 6 were updated to reflect: queue teardown that calls the active engine's unload routine; a voice list filtered by active engine; error handling covering both Kokoro and Piper model download failures; and README coverage of the engine selector popup.
