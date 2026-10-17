@@ -4,7 +4,7 @@ import { getDefaultVoiceForEngine } from './voices';
 import {
   getOrInitializeSettings,
   SETTINGS_STORAGE_KEY,
-  type EngineSettings,
+  type StoredSettings,
   type TTSEngine,
 } from './settings';
 import { encodeWAV, decodeWAV } from './audio';
@@ -27,6 +27,7 @@ export interface PlayerState {
   status: PlayerStatus;
   message: string | null;
   engine?: TTSEngine;
+  voice?: string;
 }
 
 export type StateListener = (state: PlayerState) => void;
@@ -55,12 +56,13 @@ export class Player {
   private audioElement: HTMLAudioElement;
   private client: TTSClient;
   private activeEngine: TTSEngine = 'kokoro';
+  private activeVoice: string = getDefaultVoiceForEngine('kokoro');
   private currentAudioUrl: string | null = null;
   private currentSpeed = 1.0;
 
   /**
    * Monotonically-increasing token. Incremented on every replace / stop /
-   * engine-change. Any async closure that captured an older value is stale.
+   * engine-change / voice-change. Any async closure that captured an older value is stale.
    */
   private generationToken = 0;
 
@@ -93,10 +95,17 @@ export class Player {
       b.storage.onChanged.addListener(async (changes: any, area: string) => {
         if (area === 'local' && changes[SETTINGS_STORAGE_KEY]) {
           const newSettings = changes[SETTINGS_STORAGE_KEY].newValue as
-            | EngineSettings
+            | StoredSettings
             | undefined;
-          if (newSettings && newSettings.engine) {
-            await this.handleEngineChange(newSettings.engine);
+          if (newSettings) {
+            if (newSettings.engine && newSettings.engine !== this.activeEngine) {
+              await this.handleEngineChange(newSettings.engine);
+            }
+            const targetVoice =
+              newSettings.voicePreferences?.activeVoice?.[this.activeEngine];
+            if (targetVoice && targetVoice !== this.activeVoice) {
+              await this.handleVoiceChange(targetVoice);
+            }
           }
         }
       });
@@ -123,11 +132,16 @@ export class Player {
       status: this.status,
       message: this.message,
       engine: this.activeEngine,
+      voice: this.activeVoice,
     };
   }
 
   getActiveEngine(): TTSEngine {
     return this.activeEngine;
+  }
+
+  getActiveVoice(): string {
+    return this.activeVoice;
   }
 
   getCurrentIndex(): number {
@@ -156,7 +170,7 @@ export class Player {
       const entry: QueueEntry = { cancelled: false, promise: Promise.resolve('') };
 
       const chunkText = this.chunks[i] as string;
-      const voiceId = getDefaultVoiceForEngine(this.activeEngine);
+      const voiceId = this.activeVoice || getDefaultVoiceForEngine(this.activeEngine);
       const engine = this.activeEngine;
 
       entry.promise = this.client
@@ -195,12 +209,17 @@ export class Player {
   }
 
   // ---------------------------------------------------------------------------
-  // Engine change
+  // Engine & Voice change
   // ---------------------------------------------------------------------------
 
   async handleEngineChange(newEngine: TTSEngine) {
     if (this.activeEngine === newEngine) return;
     this.activeEngine = newEngine;
+
+    const settings = await getOrInitializeSettings().catch(() => null);
+    this.activeVoice =
+      settings?.voicePreferences?.activeVoice?.[this.activeEngine] ||
+      getDefaultVoiceForEngine(this.activeEngine);
 
     if (this.status === 'playing' || this.status === 'buffering') {
       this.generationToken++;
@@ -211,8 +230,7 @@ export class Player {
 
       try {
         await this.client.unload();
-        const voiceId = getDefaultVoiceForEngine(this.activeEngine);
-        await this.client.load(this.activeEngine, voiceId);
+        await this.client.load(this.activeEngine, this.activeVoice);
         if (this.currentIndex < this.chunks.length) {
           this.scheduleAhead(this.currentIndex, token);
           await this.playNextChunk();
@@ -228,8 +246,7 @@ export class Player {
       this.clearQueue();
       try {
         await this.client.unload();
-        const voiceId = getDefaultVoiceForEngine(this.activeEngine);
-        await this.client.load(this.activeEngine, voiceId);
+        await this.client.load(this.activeEngine, this.activeVoice);
         // Re-schedule so resume() has audio ready
         this.scheduleAhead(this.currentIndex, token);
       } catch (err: any) {
@@ -238,6 +255,46 @@ export class Player {
     } else {
       // idle / ended — free model memory immediately
       this.client.unload().catch(() => {});
+    }
+  }
+
+  async handleVoiceChange(newVoice: string) {
+    if (this.activeVoice === newVoice) return;
+    this.activeVoice = newVoice;
+
+    if (this.status === 'playing' || this.status === 'buffering') {
+      this.generationToken++;
+      const token = this.generationToken;
+      this.clearQueue();
+
+      try {
+        if (this.activeEngine === 'piper') {
+          this.updateState('buffering');
+          await this.client.load(this.activeEngine, this.activeVoice);
+        }
+        if (this.currentIndex < this.chunks.length) {
+          this.scheduleAhead(this.currentIndex, token);
+          if (this.status === 'buffering') {
+            await this.playNextChunk();
+          }
+        } else {
+          this.updateState('ended');
+        }
+      } catch (err: any) {
+        if (this.generationToken === token) this.updateState('error', err.message);
+      }
+    } else if (this.status === 'paused') {
+      this.generationToken++;
+      const token = this.generationToken;
+      this.clearQueue();
+      try {
+        if (this.activeEngine === 'piper') {
+          await this.client.load(this.activeEngine, this.activeVoice);
+        }
+        this.scheduleAhead(this.currentIndex, token);
+      } catch (err: any) {
+        if (this.generationToken === token) this.updateState('error', err.message);
+      }
     }
   }
 
@@ -283,19 +340,25 @@ export class Player {
         engine: 'kokoro' as TTSEngine,
         hasWebGpu: true,
         checkedAt: Date.now(),
+        voicePreferences: {
+          activeVoice: { kokoro: 'af_heart', piper: 'en_US-hfc_female-medium' },
+          favorites: { kokoro: ['af_heart'], piper: ['en_US-hfc_female-medium'] },
+        },
       }));
 
       if (this.generationToken !== token) return;
 
       this.activeEngine = settings.engine || 'kokoro';
-      const voiceId = getDefaultVoiceForEngine(this.activeEngine);
+      this.activeVoice =
+        settings.voicePreferences?.activeVoice?.[this.activeEngine] ||
+        getDefaultVoiceForEngine(this.activeEngine);
 
       // Unload any stale engine model before loading the replacement
       await this.client.unload().catch(() => {});
 
       if (this.generationToken !== token) return;
 
-      await this.client.load(this.activeEngine, voiceId);
+      await this.client.load(this.activeEngine, this.activeVoice);
 
       if (this.generationToken !== token) return;
 

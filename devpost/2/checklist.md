@@ -3,45 +3,55 @@ doc: checklist
 status: approved
 ---
 
-# Build Checklist
+# Build Checklist — Voice Picker & Catalog
 
 Build mode: learn
 
 ## Slices
 
-- [x] **1. Popup engine selector with cached WebGPU detection**
-  Becomes usable: Clicking the extension toolbar icon opens a styled popup in Chrome and Firefox. It tests for WebGPU capability, caches the result in `browser.storage.local`, shows the engine choice (Kokoro vs. Piper) with the WebGPU recommendation banner if missing, and saves engine clicks immediately.
-  Why now: Establishes the user configuration entrypoint, the cross-browser storage schema, and the hardware check needed to dictate defaults before integrating the new engine.
-  PRD ref: `prd.md > The Core Journey`, `prd.md > Engine Selection & Switching`, `prd.md > WebGPU Detection & Caching`, `prd.md > Screens and Layout`
-  Spec ref: `spec.md > Components > Popup Root`, `spec.md > Components > Hardware Detector`, `spec.md > Components > Engine Settings Manager`, `spec.md > Data Model`, `spec.md > File Structure`
-  Build: Add `entrypoints/popup/` (HTML template, React root, and App UI component) using existing theme tokens. Implement `lib/hardware.ts` (`checkWebGpu` with safe timeout) and `lib/settings.ts` (`getOrInitializeSettings`, `saveEnginePreference`). Configure popup action in `wxt.config.ts`.
-  Verify (mechanical): Unit tests for `lib/hardware.ts` and `lib/settings.ts`; `npm run build` and `npm run build:firefox` both succeed; generated manifests include `action.default_popup`.
-  Learner check: Load the extension in Chrome or Firefox, click the toolbar icon to open the popup. Verify that WebGPU status is detected, the default engine is set, and clicking between Kokoro and Piper updates immediately without a save button.
-  Commit: `Add extension popup with WebGPU detection and engine selection`
+- [x] **1. Voice catalog data layer, persistent preferences, and side panel quick switcher**
+  Becomes usable: The Voice button in the side panel player is enabled. Clicking it opens a `VoicePopup` above the button listing favorite voices for the active engine (defaults to Heart for Kokoro, HFC Female for Piper) with an active checkmark. Selecting a voice updates the active voice in storage and immediately changes the voice used for subsequent sentences.
+  Why now: Delivers the core player functionality first without waiting for the catalog UI. It establishes the catalog data structures, storage migration, and player integration end-to-end.
+  PRD ref: `prd.md > Voice`, `prd.md > Screens and Layout`
+  Spec ref: `VoiceResearch.md > 3.3 Side Panel Voice Popup`, `VoiceResearch.md > 4. Voice Catalog`, `VoiceResearch.md > 6. Data Model & Storage Schema`
+  Build: In `lib/voices.ts`, define the full 24-voice catalog (12 Kokoro, 12 Piper) with IDs, display names, gender, accent, style tags, and preview URLs. In `lib/settings.ts`, add `VoicePreferences` (`activeVoice`, `favorites`) with backwards-compatible defaults and persistence. Update `lib/player.ts` to read the active voice from settings, load the selected voice, and pass it to generation. Build `entrypoints/sidepanel/components/VoicePopup.tsx` and enable the Voice button in `PlayerControls.tsx`.
+  Verify (mechanical): Unit tests pass for `lib/voices.ts` (catalog counts, retrieval helpers) and `lib/settings.ts` (defaults, storage reads/writes, migration); `npm run build` and `npm run build:firefox` succeed.
+  Learner check: Open the side panel, click the Voice button, verify the popup opens showing the default active voice, and select a voice. Start reading and verify speech plays with the selected voice.
+  Commit: `Add voice data layer and side panel quick switcher popup`
 
-- [x] **2. Piper TTS synthesizes speech with worker memory management**
-  Becomes usable: The TTS worker can load Piper via WebAssembly/ONNX, synthesize speech for text chunks, report progress, and enforce mutual exclusion—unloading and disposing Kokoro before Piper loads (and vice-versa) so only one model resides in memory.
-  Why now: This is the core technical risk: getting Piper's phonemizer and ONNX model downloading and synthesizing audio in the web worker alongside memory lifecycle guarantees.
-  PRD ref: `prd.md > Dual-Engine Audio Playback & Memory Management`, `prd.md > States and Boundaries`, `prd.md > Product Decisions`
-  Spec ref: `spec.md > Components > Unified TTS Worker`, `spec.md > Components > TTS Client`, `spec.md > External Services and Dependencies`, `spec.md > What Was Simplified and Why`
-  Build: Install `@mintplex-labs/piper-tts-web`. Define default Piper voice in `lib/voices.ts`. Update `lib/tts.worker.ts` with `activeEngine` state, `unloadEngine()` cleanup routines, and Piper `load`/`generate` handlers returning playable audio data. Update `lib/tts-client.ts` to support engine dispatch and lifecycle calls.
-  Verify (mechanical): Unit tests for engine switching lifecycle (verifying unload calls and activeEngine transitions); build succeeds in Chromium and Firefox; test synthesis script or worker test verifies Piper audio output generation.
-  Learner check: Run a test invocation with Piper selected; observe model download progress if first run, and verify the worker emits valid audio without crashing or keeping both engines resident.
-  Commit: `Integrate Piper TTS in worker with single-engine memory management`
+- [ ] **2. Dedicated voice catalog page with audio sample previews**
+  Becomes usable: A standalone extension tab at `voices.html` showing all 24 curated voices (12 Kokoro, 12 Piper) in clean tabs with light/dark theme support. Each card displays voice traits (gender, accent, style) and an interactive ▶ / ⏸ audio player that streams sample speech clips instantly with zero model download.
+  Why now: Learners and users need an interactive space to audition voices before curating their favorites. Pre-rendered audio previews keep catalog browsing lightweight and fast.
+  PRD ref: `prd.md > Voice`, `prd.md > Screens and Layout`
+  Spec ref: `VoiceResearch.md > 3.2 Dedicated Voice Catalog Page`, `VoiceResearch.md > 4. Voice Catalog`, `VoiceResearch.md > 5. Sample Audio Strategy`
+  Build: Register WXT entrypoint `entrypoints/voices/index.html` and create `entrypoints/voices/App.tsx`. Implement responsive grid layout using existing semantic theme tokens (`bg-primary`, `bg-surface`, `text-on-primary`, `accent`). Add engine tabs with favorite count pills. Implement sample audio player logic ensuring only one sample plays at a time and graceful offline handling.
+  Verify (mechanical): `npm run build` and `npm run build:firefox` succeed; `voices.html` is output in Chrome and Firefox build folders; unit tests verify preview audio URL formats and single-sample playback state manager.
+  Learner check: Open `voices.html` directly in the browser, toggle between Kokoro and Piper tabs, and click ▶ on several voice cards to listen to the audio preview clips.
+  Commit: `Add dedicated voice catalog page with audio sample previews`
 
-- [x] **3. Dual-engine reading through the shared player with sentence highlighting**
-  Becomes usable: Full end-to-end reading with Piper or Kokoro. Selecting text on any webpage and clicking Read Aloud reads using the configured engine from the popup. The shared player handles play/pause/buffering, sentences highlight on the webpage, and switching engines between readings cleanly unloads the old engine and starts the new one.
-  Why now: Completes the full user journey: ties the popup preference, the worker engine, and the on-page player together into a unified experience without duplicate player code.
-  PRD ref: `prd.md > The Core Journey`, `prd.md > Dual-Engine Audio Playback & Memory Management`, `prd.md > What We're Building`
-  Spec ref: `spec.md > Components > Shared Player`, `spec.md > Look and Feel`, `spec.md > Decisions and Open Issues`
-  Build: Wire `lib/player.ts` to inspect `getOrInitializeSettings()` on reading start. Pass active engine to `ttsClient`. Connect audio stream from Piper to the existing HTMLAudioElement / Web Audio queue and sentence highlight dispatch. Handle engine switch between readings.
-  Verify (mechanical): Unit tests for player engine initialization and switching; full build `npm run build` and `npm run build:firefox` succeed without errors or warnings; all vitest test suites pass.
-  Learner check: Select text on a page, open the popup and select Piper. Right-click Read Aloud: confirm you hear the Piper voice with sentence highlighting. Then open popup, switch to Kokoro, right-click Read Aloud: confirm Kokoro plays smoothly with highlighting.
-  Commit: `Route dual-engine playback through shared player with highlighting`
+- [ ] **3. Favorite management (max 5) and dynamic unpinned voice handling**
+  Becomes usable: In `voices.html`, users can favorite/unfavorite voices (♡ / ♥) up to 5 per engine. Attempting to add a 6th favorite shows an informative warning. Users can click "Use as Active Voice"; selecting an unpinned voice shows a toast with an option to favorite it. In the side panel, the popup dynamically displays `[5 Favorites] + [1 Active Voice]` when unpinned, and picking any favorite dismisses the unpinned voice back to 5.
+  Why now: Implements the complete favorite management rules and the dynamic list coordination between the catalog and the side panel player.
+  PRD ref: `prd.md > Voice`, `prd.md > States and Boundaries`
+  Spec ref: `VoiceResearch.md > 2. User Journey & Core Interactions`, `VoiceResearch.md > 3.2 Dedicated Voice Catalog Page`, `VoiceResearch.md > 3.3 Side Panel Voice Popup`
+  Build: Implement favorite limit validation (max 5) and active voice selection actions in `lib/settings.ts`. In `entrypoints/voices/App.tsx`, connect heart toggle buttons, favorite counter badge, 6th-favorite modal/toast, and non-favorite selection toast with `[Add to Favorites]` button. In `entrypoints/sidepanel/components/VoicePopup.tsx`, implement dynamic list construction (5 favorites + 1 active if unpinned) and auto-dismissal of unpinned voice on favorite selection. Add catalog link footer.
+  Verify (mechanical): Unit tests pass for 5-favorite cap enforcement, toggle mutations, and dynamic popup list formatting; both Chrome and Firefox builds succeed.
+  Learner check: In `voices.html`, favorite 5 voices and attempt a 6th to check the warning toast. Select an unpinned voice, open the side panel, and confirm it displays 6 voices (5 favorites + 1 active). Click one of your favorites in the side panel and confirm the unpinned voice disappears.
+  Commit: `Add voice favorites management and dynamic side panel list`
+
+- [ ] **4. Toolbar settings entry point and full cross-page navigation integration**
+  Becomes usable: The toolbar popup (`entrypoints/popup/App.tsx`) displays a dedicated "Voice" row under the engine radios with the currently active voice name and an arrow. Clicking the row opens `voices.html` in a new tab. In the side panel voice popup, clicking "Manage all voices in catalog ›" also opens `voices.html`. Voice changes synchronize reactively across all open views and the player.
+  Why now: Completes the end-to-end user journey across all three extension surfaces (toolbar popup, side panel, and dedicated tab) and verifies seamless switching across both engines during live reading.
+  PRD ref: `prd.md > Voice`, `prd.md > Triggering a reading`
+  Spec ref: `VoiceResearch.md > 2. User Journey & Core Interactions`, `VoiceResearch.md > 3.1 Toolbar Settings Entry Point`, `VoiceResearch.md > 7. Model Download & Memory Management`
+  Build: Add the Voice row in `entrypoints/popup/App.tsx` displaying the active voice for the selected engine and opening `voices.html` via `browser.tabs.create`. Wire catalog link in `VoicePopup.tsx`. Verify reactive storage updates so changing active voice or engine in one view immediately updates the others. Ensure player speech generation handles voice switching cleanly for both Kokoro and Piper.
+  Verify (mechanical): Unit tests verify popup voice row display and navigation trigger; `npm run build` and `npm run build:firefox` succeed; end-to-end storage reactivity verified.
+  Learner check: Open the extension toolbar popup, check that the active voice matches your selection, click the Voice row to open `voices.html`, select a new voice, and trigger Read Aloud on a web page to hear the updated voice in action.
+  Commit: `Integrate toolbar popup voice row and cross-page navigation`
 
 ## Hands-on Checkpoints
 
-- [ ] Early usable behavior explored — after slice 1 (popup & hardware check) and slice 2 (Piper synthesis)
+- [ ] Early usable behavior explored — after slice 1, when you can switch voices in the side panel and hear the change
 - [ ] Final kick-the-tires exploration and feedback completed
 
 ## Final Review
@@ -61,4 +71,3 @@ Reflection: [offered/answered/declined/already covered — personal answer belon
 Activity mode: [live app and editor, explicit static fallback, focused alternative, prior practice, or recap]
 
 ## Revisions
-

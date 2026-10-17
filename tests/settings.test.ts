@@ -137,9 +137,13 @@ describe('getOrInitializeSettings and saveEnginePreference', () => {
 
   it('returns cached settings if already present without probing', async () => {
     const cached = {
-      engine: 'piper',
+      engine: 'piper' as const,
       hasWebGpu: true,
       checkedAt: 12345678,
+      voicePreferences: {
+        activeVoice: { kokoro: 'af_bella', piper: 'en_US-lessac-medium' },
+        favorites: { kokoro: ['af_bella'], piper: ['en_US-lessac-medium'] },
+      },
     };
     mockStorage[SETTINGS_STORAGE_KEY] = cached;
 
@@ -153,10 +157,108 @@ describe('getOrInitializeSettings and saveEnginePreference', () => {
       engine: 'kokoro',
       hasWebGpu: true,
       checkedAt: 100,
+      voicePreferences: {
+        activeVoice: { kokoro: 'af_heart', piper: 'en_US-hfc_female-medium' },
+        favorites: { kokoro: ['af_heart'], piper: ['en_US-hfc_female-medium'] },
+      },
     };
 
     const updated = await saveEnginePreference('piper');
     expect(updated.engine).toBe('piper');
     expect(mockStorage[SETTINGS_STORAGE_KEY].engine).toBe('piper');
   });
+
+  it('initializes default voice preferences when initializing fresh settings', async () => {
+    Object.defineProperty(globalThis, 'navigator', {
+      value: {},
+      configurable: true,
+      writable: true,
+    });
+
+    const settings = await getOrInitializeSettings();
+    expect(settings.voicePreferences).toBeDefined();
+    expect(settings.voicePreferences.activeVoice.kokoro).toBe('af_heart');
+    expect(settings.voicePreferences.activeVoice.piper).toBe('en_US-hfc_female-medium');
+    expect(settings.voicePreferences.favorites.kokoro).toEqual(['af_heart']);
+    expect(settings.voicePreferences.favorites.piper).toEqual(['en_US-hfc_female-medium']);
+  });
+
+  it('migrates legacy settings without voicePreferences to include default voice preferences', async () => {
+    mockStorage[SETTINGS_STORAGE_KEY] = {
+      engine: 'piper',
+      hasWebGpu: false,
+      checkedAt: 99999,
+    };
+
+    const settings = await getOrInitializeSettings();
+    expect(settings.engine).toBe('piper');
+    expect(settings.voicePreferences).toBeDefined();
+    expect(settings.voicePreferences.activeVoice.piper).toBe('en_US-hfc_female-medium');
+    expect(mockStorage[SETTINGS_STORAGE_KEY].voicePreferences).toBeDefined();
+  });
+
+  it('saveActiveVoice updates and persists active voice for specified engine', async () => {
+    mockStorage[SETTINGS_STORAGE_KEY] = {
+      engine: 'kokoro',
+      hasWebGpu: true,
+      checkedAt: 100,
+      voicePreferences: {
+        activeVoice: { kokoro: 'af_heart', piper: 'en_US-hfc_female-medium' },
+        favorites: { kokoro: ['af_heart'], piper: ['en_US-hfc_female-medium'] },
+      },
+    };
+
+    const { saveActiveVoice } = await import('../lib/settings');
+    const updated = await saveActiveVoice('kokoro', 'af_bella');
+    expect(updated.voicePreferences.activeVoice.kokoro).toBe('af_bella');
+    expect(mockStorage[SETTINGS_STORAGE_KEY].voicePreferences.activeVoice.kokoro).toBe('af_bella');
+    // Piper voice remains untouched
+    expect(updated.voicePreferences.activeVoice.piper).toBe('en_US-hfc_female-medium');
+  });
+
+  it('toggleFavoriteVoice adds and removes voice favorites', async () => {
+    mockStorage[SETTINGS_STORAGE_KEY] = {
+      engine: 'kokoro',
+      hasWebGpu: true,
+      checkedAt: 100,
+      voicePreferences: {
+        activeVoice: { kokoro: 'af_heart', piper: 'en_US-hfc_female-medium' },
+        favorites: { kokoro: ['af_heart'], piper: ['en_US-hfc_female-medium'] },
+      },
+    };
+
+    const { toggleFavoriteVoice } = await import('../lib/settings');
+
+    // Add a second favorite
+    const res1 = await toggleFavoriteVoice('kokoro', 'af_bella');
+    expect(res1.added).toBe(true);
+    expect(res1.settings.voicePreferences.favorites.kokoro).toEqual(['af_heart', 'af_bella']);
+
+    // Remove af_bella
+    const res2 = await toggleFavoriteVoice('kokoro', 'af_bella');
+    expect(res2.added).toBe(false);
+    expect(res2.settings.voicePreferences.favorites.kokoro).toEqual(['af_heart']);
+  });
+
+  it('toggleFavoriteVoice enforces the 5-favorite maximum limit', async () => {
+    mockStorage[SETTINGS_STORAGE_KEY] = {
+      engine: 'kokoro',
+      hasWebGpu: true,
+      checkedAt: 100,
+      voicePreferences: {
+        activeVoice: { kokoro: 'af_heart', piper: 'en_US-hfc_female-medium' },
+        favorites: {
+          kokoro: ['v1', 'v2', 'v3', 'v4', 'v5'],
+          piper: ['en_US-hfc_female-medium'],
+        },
+      },
+    };
+
+    const { toggleFavoriteVoice } = await import('../lib/settings');
+    const res = await toggleFavoriteVoice('kokoro', 'v6');
+    expect(res.added).toBe(false);
+    expect(res.error).toBeDefined();
+    expect(res.settings.voicePreferences.favorites.kokoro).toHaveLength(5);
+  });
 });
+

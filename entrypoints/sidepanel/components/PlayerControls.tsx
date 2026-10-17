@@ -3,9 +3,10 @@ import { PlayIcon, SpeedIcon, VoiceIcon } from './icons';
 import { player, type PlayerStatus } from '@/lib/player';
 import Popup from './Popup';
 import SpeedPopup from './SpeedPopup';
+import VoicePopup from './VoicePopup';
 
 const side =
-  'flex h-14 w-14 items-center justify-center rounded-full border border-border bg-surface text-on-surface transition disabled:cursor-not-allowed disabled:opacity-50';
+  'flex h-14 w-14 items-center justify-center rounded-full border border-border bg-surface text-on-surface transition disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer';
 
 interface PlayerControlsProps {
   status: PlayerStatus;
@@ -18,6 +19,7 @@ interface PlayerControlsProps {
  */
 export default function PlayerControls({ status, speed, onSpeedChange }: PlayerControlsProps) {
   const [speedPopupOpen, setSpeedPopupOpen] = useState(false);
+  const [voicePopupOpen, setVoicePopupOpen] = useState(false);
 
   const isPlaying = status === 'playing';
   const isBuffering = status === 'downloading' || status === 'buffering';
@@ -40,7 +42,10 @@ export default function PlayerControls({ status, speed, onSpeedChange }: PlayerC
           id="speed-button"
           type="button"
           aria-label="Speed"
-          onClick={() => setSpeedPopupOpen(!speedPopupOpen)}
+          onClick={() => {
+            setSpeedPopupOpen(!speedPopupOpen);
+            setVoicePopupOpen(false);
+          }}
           className={side}
         >
           <SpeedIcon />
@@ -59,7 +64,7 @@ export default function PlayerControls({ status, speed, onSpeedChange }: PlayerC
         aria-label={isPlaying ? 'Pause' : 'Play'}
         disabled={disabled}
         onClick={onPlayPause}
-        className="flex h-20 w-20 items-center justify-center rounded-full bg-accent text-on-accent shadow-lg shadow-accent/30 transition disabled:cursor-not-allowed disabled:opacity-50"
+        className="flex h-20 w-20 items-center justify-center rounded-full bg-accent text-on-accent shadow-lg shadow-accent/30 transition disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
       >
         {isBuffering ? (
           <span className="flex h-6 w-6 animate-spin rounded-full border-2 border-on-accent border-t-transparent" />
@@ -69,9 +74,27 @@ export default function PlayerControls({ status, speed, onSpeedChange }: PlayerC
           <PlayIcon />
         )}
       </button>
-      <button id="voice-button" type="button" aria-label="Voice" disabled className={side}>
-        <VoiceIcon />
-      </button>
+      <div className="relative">
+        <button
+          id="voice-button"
+          type="button"
+          aria-label="Voice"
+          onClick={() => {
+            setVoicePopupOpen(!voicePopupOpen);
+            setSpeedPopupOpen(false);
+          }}
+          className={side}
+        >
+          <VoiceIcon />
+        </button>
+        <Popup
+          anchorId="voice-button"
+          visible={voicePopupOpen}
+          onClose={() => setVoicePopupOpen(false)}
+        >
+          <VoicePopup onClose={() => setVoicePopupOpen(false)} />
+        </Popup>
+      </div>
     </div>
   );
 }
