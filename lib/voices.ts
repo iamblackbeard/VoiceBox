@@ -262,3 +262,40 @@ export function getVoicesForEngine(engine: 'kokoro' | 'piper'): Voice[] {
 export function getVoiceById(id: string): Voice | undefined {
   return VOICES.find((v) => v.id === id);
 }
+
+export interface PopupVoiceList {
+  favorites: Voice[];
+  unpinned?: Voice;
+  totalCount: number;
+}
+
+/**
+ * Formats the list of voices to display in the side panel Voice popup.
+ * Enforces the "5 Favorites + 1 Active Voice if unpinned" rule:
+ * - If the active voice is in the favorites list (up to 5), only the favorites are returned.
+ * - If the active voice is NOT in favorites, returns the 5 favorites plus the unpinned active voice.
+ * - When any favorite is selected as active, the unpinned voice is automatically dismissed.
+ */
+export function formatPopupVoiceList(
+  engine: 'kokoro' | 'piper',
+  activeVoiceId: string,
+  favoriteIds: string[],
+): PopupVoiceList {
+  const safeFavorites = (favoriteIds || [])
+    .map((id) => getVoiceById(id))
+    .filter((v): v is Voice => v !== undefined && v.engine === engine)
+    .slice(0, 5);
+
+  const isActiveInFavorites = safeFavorites.some((v) => v.id === activeVoiceId);
+  const activeVoice = getVoiceById(activeVoiceId);
+  const unpinned =
+    !isActiveInFavorites && activeVoice && activeVoice.engine === engine
+      ? activeVoice
+      : undefined;
+
+  return {
+    favorites: safeFavorites,
+    unpinned,
+    totalCount: safeFavorites.length + (unpinned ? 1 : 0),
+  };
+}

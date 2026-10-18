@@ -8,6 +8,7 @@ import {
   type TTSEngine,
 } from '@/lib/settings';
 import {
+  getVoiceById,
   getVoicesForEngine,
   type Voice,
   type VoiceAccent,
@@ -19,6 +20,7 @@ import {
 } from '@/lib/audio-preview';
 import { VoiceCard } from './components/VoiceCard';
 import { ToastNotice, type ToastData } from './components/ToastNotice';
+import { FavoriteLimitModal } from './components/FavoriteLimitModal';
 
 function getBrowser(): any {
   if (typeof browser !== 'undefined' && browser?.storage) return browser;
@@ -37,6 +39,8 @@ export default function App() {
     audioPreviewManager.getState(),
   );
   const [toast, setToast] = useState<ToastData | null>(null);
+  const [limitModalOpen, setLimitModalOpen] = useState(false);
+  const [attemptedVoiceName, setAttemptedVoiceName] = useState<string | undefined>(undefined);
 
   // Initialize and listen to storage changes
   useEffect(() => {
@@ -86,6 +90,12 @@ export default function App() {
     () => settings?.voicePreferences?.favorites?.[activeTab] || [],
     [settings, activeTab],
   );
+
+  const favoriteVoicesForTab = useMemo(() => {
+    return favoritesForTab
+      .map((id) => getVoiceById(id))
+      .filter((v): v is Voice => v !== undefined && v.engine === activeTab);
+  }, [favoritesForTab, activeTab]);
 
   const kokoroFavorites = settings?.voicePreferences?.favorites?.kokoro || [];
   const piperFavorites = settings?.voicePreferences?.favorites?.piper || [];
@@ -149,6 +159,8 @@ export default function App() {
       setSettings(res.settings);
 
       if (res.error) {
+        setAttemptedVoiceName(voice.name);
+        setLimitModalOpen(true);
         setToast({
           id: `fav-err-${Date.now()}`,
           type: 'warning',
@@ -394,6 +406,18 @@ export default function App() {
 
       {/* Toast Notice Container */}
       <ToastNotice toast={toast} onClose={() => setToast(null)} />
+
+      {/* 6th Favorite Limit Warning Modal */}
+      <FavoriteLimitModal
+        isOpen={limitModalOpen}
+        onClose={() => {
+          setLimitModalOpen(false);
+          setAttemptedVoiceName(undefined);
+        }}
+        favorites={favoriteVoicesForTab}
+        onRemoveFavorite={(v) => handleToggleFavorite(v)}
+        attemptedVoiceName={attemptedVoiceName}
+      />
     </div>
   );
 }

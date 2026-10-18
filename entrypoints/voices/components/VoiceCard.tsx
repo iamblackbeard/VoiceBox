@@ -184,7 +184,7 @@ export const VoiceCard: React.FC<VoiceCardProps> = ({
             onClick={onSelectActive}
             className="w-full flex items-center justify-center gap-1.5 rounded-lg bg-primary border border-border py-2 text-xs font-semibold text-on-primary hover:border-accent hover:text-accent transition cursor-pointer"
           >
-            <span>Select as Active Voice</span>
+            <span>Use as Active Voice</span>
           </button>
         )}
       </div>

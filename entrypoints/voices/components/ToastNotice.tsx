@@ -52,7 +52,6 @@ export const ToastNotice: React.FC<ToastNoticeProps> = ({ toast, onClose }) => {
           type="button"
           onClick={() => {
             toast.onAction?.();
-            onClose();
           }}
           className="shrink-0 rounded-lg bg-accent px-2.5 py-1 text-xs font-semibold text-on-accent hover:opacity-90 transition cursor-pointer"
         >

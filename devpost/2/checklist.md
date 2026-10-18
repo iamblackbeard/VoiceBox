@@ -19,7 +19,7 @@ Build mode: learn
   Learner check: Open the side panel, click the Voice button, verify the popup opens showing the default active voice, and select a voice. Start reading and verify speech plays with the selected voice.
   Commit: `Add voice data layer and side panel quick switcher popup`
 
-- [ ] **2. Dedicated voice catalog page with audio sample previews**
+- [x] **2. Dedicated voice catalog page with audio sample previews**
   Becomes usable: A standalone extension tab at `voices.html` showing all 24 curated voices (12 Kokoro, 12 Piper) in clean tabs with light/dark theme support. Each card displays voice traits (gender, accent, style) and an interactive ▶ / ⏸ audio player that streams sample speech clips instantly with zero model download.
   Why now: Learners and users need an interactive space to audition voices before curating their favorites. Pre-rendered audio previews keep catalog browsing lightweight and fast.
   PRD ref: `prd.md > Voice`, `prd.md > Screens and Layout`

@@ -6,7 +6,7 @@ import {
   type StoredSettings,
   type TTSEngine,
 } from '@/lib/settings';
-import { getVoiceById, type Voice } from '@/lib/voices';
+import { formatPopupVoiceList, type Voice } from '@/lib/voices';
 import { player } from '@/lib/player';
 
 interface VoicePopupProps {
@@ -66,13 +66,12 @@ export default function VoicePopup({ onClose }: VoicePopupProps) {
     (engine === 'piper' ? 'en_US-hfc_female-medium' : 'af_heart');
   const favoriteIds = settings.voicePreferences?.favorites?.[engine] || [activeVoiceId];
 
-  // Map favorite IDs to Voice objects (filtering out missing or mismatched voices)
-  const favoriteVoices: Voice[] = favoriteIds
-    .map((id) => getVoiceById(id))
-    .filter((v): v is Voice => v !== undefined && v.engine === engine);
-
-  const isActiveInFavorites = favoriteIds.includes(activeVoiceId);
-  const unpinnedVoice = !isActiveInFavorites ? getVoiceById(activeVoiceId) : undefined;
+  // Dynamic 5 favorites + 1 active voice (if unpinned)
+  const { favorites: favoriteVoices, unpinned: unpinnedVoice } = formatPopupVoiceList(
+    engine,
+    activeVoiceId,
+    favoriteIds,
+  );
 
   const handleSelectVoice = async (voiceId: string) => {
     try {
@@ -149,9 +148,14 @@ export default function VoicePopup({ onClose }: VoicePopupProps) {
         {/* Temporary / Unpinned Voice (if active voice is not in favorites) */}
         {unpinnedVoice && (
           <div className="mt-1 flex flex-col gap-1 border-t border-border/70 pt-1.5">
-            <span className="px-1 text-[10px] font-medium text-on-surface">
-              Active Voice (Unpinned)
-            </span>
+            <div className="flex items-center justify-between px-1">
+              <span className="text-[10px] font-medium text-on-surface">
+                Active Voice (Unpinned)
+              </span>
+              <span className="rounded bg-accent/15 px-1.5 py-0.5 text-[9px] font-semibold text-accent">
+                Temporary
+              </span>
+            </div>
             <button
               type="button"
               role="option"
