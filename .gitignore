@@ -41,3 +41,4 @@ web-ext.config.*
 .agents/
 skills-lock.json
 agent/
+devpost/

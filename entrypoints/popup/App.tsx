@@ -2,24 +2,59 @@ import { useEffect, useState } from 'react';
 import {
   getOrInitializeSettings,
   saveEnginePreference,
-  type EngineSettings,
+  SETTINGS_STORAGE_KEY,
+  type StoredSettings,
   type TTSEngine,
 } from '@/lib/settings';
+import {
+  getDefaultVoiceForEngine,
+  getVoiceById,
+} from '@/lib/voices';
+
+function getBrowser(): any {
+  if (typeof browser !== 'undefined' && browser?.storage) return browser;
+  if (typeof globalThis !== 'undefined' && (globalThis as any).browser) return (globalThis as any).browser;
+  if (typeof (globalThis as any).chrome !== 'undefined') return (globalThis as any).chrome;
+  return undefined;
+}
 
 export default function App() {
-  const [settings, setSettings] = useState<EngineSettings | null>(null);
+  const [settings, setSettings] = useState<StoredSettings | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let mounted = true;
     getOrInitializeSettings()
       .then((s) => {
-        setSettings(s);
-        setLoading(false);
+        if (mounted) {
+          setSettings(s);
+          setLoading(false);
+        }
       })
       .catch((err) => {
         console.error('[popup] Failed to load settings:', err);
-        setLoading(false);
+        if (mounted) setLoading(false);
       });
+
+    const b = getBrowser();
+    const handleStorageChange = (changes: any, area: string) => {
+      if (area === 'local' && changes[SETTINGS_STORAGE_KEY]?.newValue) {
+        if (mounted) {
+          setSettings(changes[SETTINGS_STORAGE_KEY].newValue as StoredSettings);
+        }
+      }
+    };
+
+    if (b?.storage?.onChanged) {
+      b.storage.onChanged.addListener(handleStorageChange);
+    }
+
+    return () => {
+      mounted = false;
+      if (b?.storage?.onChanged) {
+        b.storage.onChanged.removeListener(handleStorageChange);
+      }
+    };
   }, []);
 
   const handleSelectEngine = async (engine: TTSEngine) => {
@@ -33,6 +68,20 @@ export default function App() {
     }
   };
 
+  const handleOpenVoiceCatalog = () => {
+    try {
+      const b = getBrowser();
+      const targetUrl = b?.runtime?.getURL ? b.runtime.getURL('/voices.html') : '/voices/index.html';
+      if (b?.tabs?.create) {
+        b.tabs.create({ url: targetUrl });
+      } else if (typeof window !== 'undefined') {
+        window.open(targetUrl, '_blank');
+      }
+    } catch (err) {
+      console.error('[popup] Failed to open voice catalog:', err);
+    }
+  };
+
   if (loading || !settings) {
     return (
       <div className="w-[320px] p-5 flex flex-col items-center justify-center min-h-[220px] bg-primary text-on-primary">
@@ -43,6 +92,10 @@ export default function App() {
   }
 
   const { engine, hasWebGpu } = settings;
+  const activeVoiceId =
+    settings.voicePreferences?.activeVoice?.[engine] || getDefaultVoiceForEngine(engine);
+  const activeVoice = getVoiceById(activeVoiceId);
+  const activeVoiceName = activeVoice?.name || (engine === 'piper' ? 'HFC Female' : 'Heart');
 
   return (
     <main className="w-[330px] p-4 bg-primary text-on-primary select-none box-border flex flex-col gap-3.5">
@@ -153,6 +206,33 @@ export default function App() {
           </div>
         </label>
       </section>
+
+      {/* Voice Row / Catalog Entry Point */}
+      <button
+        type="button"
+        id="open-voice-catalog"
+        data-target="/voices/index.html"
+        onClick={handleOpenVoiceCatalog}
+        className="group flex items-center justify-between p-3 rounded-lg border border-border hover:bg-surface/50 transition-all cursor-pointer text-left w-full"
+        title="Open Voice Catalog (/voices/index.html)"
+        aria-label="Open Voice Catalog"
+      >
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-semibold text-on-primary">Voice</span>
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-accent/10 text-accent font-medium">
+            {engine === 'kokoro' ? 'Neural' : 'Fast WASM'}
+          </span>
+        </div>
+        <div className="flex items-center gap-1.5 text-on-primary text-xs font-medium">
+          <span className="text-accent font-medium">{activeVoiceName}</span>
+          <span
+            className="text-sm font-bold text-accent transition-transform group-hover:translate-x-0.5"
+            aria-hidden="true"
+          >
+            ›
+          </span>
+        </div>
+      </button>
 
       {/* Footer / Status Note */}
       <footer className="pt-1 flex items-center justify-between text-[10px] text-on-surface">

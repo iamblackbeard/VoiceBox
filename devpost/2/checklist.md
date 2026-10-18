@@ -29,7 +29,7 @@ Build mode: learn
   Learner check: Open `voices.html` directly in the browser, toggle between Kokoro and Piper tabs, and click ▶ on several voice cards to listen to the audio preview clips.
   Commit: `Add dedicated voice catalog page with audio sample previews`
 
-- [ ] **3. Favorite management (max 5) and dynamic unpinned voice handling**
+- [x] **3. Favorite management (max 5) and dynamic unpinned voice handling**
   Becomes usable: In `voices.html`, users can favorite/unfavorite voices (♡ / ♥) up to 5 per engine. Attempting to add a 6th favorite shows an informative warning. Users can click "Use as Active Voice"; selecting an unpinned voice shows a toast with an option to favorite it. In the side panel, the popup dynamically displays `[5 Favorites] + [1 Active Voice]` when unpinned, and picking any favorite dismisses the unpinned voice back to 5.
   Why now: Implements the complete favorite management rules and the dynamic list coordination between the catalog and the side panel player.
   PRD ref: `prd.md > Voice`, `prd.md > States and Boundaries`
@@ -39,7 +39,7 @@ Build mode: learn
   Learner check: In `voices.html`, favorite 5 voices and attempt a 6th to check the warning toast. Select an unpinned voice, open the side panel, and confirm it displays 6 voices (5 favorites + 1 active). Click one of your favorites in the side panel and confirm the unpinned voice disappears.
   Commit: `Add voice favorites management and dynamic side panel list`
 
-- [ ] **4. Toolbar settings entry point and full cross-page navigation integration**
+- [x] **4. Toolbar settings entry point and full cross-page navigation integration**
   Becomes usable: The toolbar popup (`entrypoints/popup/App.tsx`) displays a dedicated "Voice" row under the engine radios with the currently active voice name and an arrow. Clicking the row opens `voices.html` in a new tab. In the side panel voice popup, clicking "Manage all voices in catalog ›" also opens `voices.html`. Voice changes synchronize reactively across all open views and the player.
   Why now: Completes the end-to-end user journey across all three extension surfaces (toolbar popup, side panel, and dedicated tab) and verifies seamless switching across both engines during live reading.
   PRD ref: `prd.md > Voice`, `prd.md > Triggering a reading`
