@@ -8,17 +8,21 @@ interface SentenceListProps {
 }
 
 /**
- * Interactive numbered sentence stream.
- * Highlights the active sentence in lockstep with audio playback.
- * Clicking any sentence seeks audio and on-page highlight to that sentence.
+ * Renders selected text as flowing prose.
+ * Each sentence is an inline, clickable span — hover highlights it,
+ * clicking seeks audio and on-page highlight to that sentence.
+ * Active sentence glows in accent color; past sentences dim gently.
  */
 export default function SentenceList({ chunks, activeIndex, status }: SentenceListProps) {
-  const listRef = useRef<HTMLDivElement>(null);
-  const activeRef = useRef<HTMLButtonElement>(null);
+  const activeRef = useRef<HTMLSpanElement>(null);
 
-  const isPlaying = status === 'playing' || status === 'buffering' || status === 'paused';
+  const isInteractive =
+    status === 'playing' ||
+    status === 'buffering' ||
+    status === 'paused' ||
+    status === 'ended';
 
-  // Auto-scroll the active sentence into view
+  // Auto-scroll active sentence into view
   useEffect(() => {
     if (activeRef.current) {
       activeRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -28,90 +32,47 @@ export default function SentenceList({ chunks, activeIndex, status }: SentenceLi
   if (chunks.length === 0) return null;
 
   const handleSeek = (index: number) => {
-    if (!isPlaying && status !== 'ended') return;
+    if (!isInteractive) return;
     player.seek(index);
   };
 
   return (
-    <div
-      ref={listRef}
-      role="list"
-      aria-label="Sentence list"
-      className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pr-1"
+    <p
+      aria-label="Reading passage"
+      className="min-h-0 flex-1 overflow-y-auto leading-relaxed text-[15px] text-on-primary"
+      style={{ wordBreak: 'break-word' }}
     >
       {chunks.map((chunk, i) => {
-        const isActive = i === activeIndex && isPlaying;
-        const isPast = i < activeIndex && isPlaying;
+        const isActive = i === activeIndex && (status === 'playing' || status === 'buffering' || status === 'paused');
+        const isPast = i < activeIndex && (status === 'playing' || status === 'buffering' || status === 'paused');
 
         return (
-          <button
+          <span
             key={i}
             ref={isActive ? activeRef : undefined}
-            type="button"
-            role="listitem"
+            role="button"
+            tabIndex={isInteractive ? 0 : -1}
             id={`sentence-${i}`}
-            aria-label={`Sentence ${i + 1}${isActive ? ' (playing)' : ''}`}
+            aria-label={`Sentence ${i + 1}${isActive ? ' — playing' : ''}`}
             aria-current={isActive ? 'true' : undefined}
             onClick={() => handleSeek(i)}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleSeek(i); }}
             className={[
-              'group flex w-full cursor-pointer items-start gap-3 rounded-2xl px-4 py-3 text-left transition-all duration-150',
+              'rounded px-[2px] py-[1px] transition-all duration-150',
+              isInteractive ? 'cursor-pointer' : 'cursor-default',
               isActive
-                ? 'bg-accent/15 ring-1 ring-accent/40 shadow-sm'
+                ? 'bg-accent/25 text-on-primary font-medium shadow-[0_0_0_1.5px_var(--color-accent)_inset] rounded-sm'
                 : isPast
-                ? 'opacity-40 hover:opacity-70 hover:bg-surface'
-                : 'hover:bg-surface',
+                ? 'text-on-primary/40'
+                : isInteractive
+                ? 'hover:bg-accent/10 hover:text-on-primary'
+                : '',
             ].join(' ')}
           >
-            {/* Sentence number badge */}
-            <span
-              className={[
-                'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold leading-none transition-colors',
-                isActive
-                  ? 'bg-accent text-on-accent'
-                  : 'bg-border text-on-surface group-hover:bg-accent/30',
-              ].join(' ')}
-            >
-              {i + 1}
-            </span>
-
-            {/* Sentence text */}
-            <span
-              className={[
-                'flex-1 text-sm leading-relaxed transition-colors',
-                isActive ? 'font-medium text-on-primary' : 'text-on-surface',
-              ].join(' ')}
-            >
-              {chunk.trim()}
-              {/* Animated sound wave indicator for the active sentence */}
-              {isActive && status === 'playing' && (
-                <span
-                  aria-hidden="true"
-                  className="ml-2 inline-flex items-end gap-[2px] align-middle"
-                >
-                  {[1, 2, 3].map((bar) => (
-                    <span
-                      key={bar}
-                      className="inline-block w-[3px] rounded-full bg-accent"
-                      style={{
-                        height: `${8 + bar * 3}px`,
-                        animation: `bounce 0.8s ease-in-out infinite`,
-                        animationDelay: `${(bar - 1) * 0.15}s`,
-                      }}
-                    />
-                  ))}
-                </span>
-              )}
-            </span>
-          </button>
+            {chunk}
+          </span>
         );
       })}
-
-      <style>{`
-        @keyframes bounce {
-          0%, 100% { transform: scaleY(0.5); }
-          50%       { transform: scaleY(1.2); }
-        }
-      `}</style>
-    </div>
+    </p>
   );
 }

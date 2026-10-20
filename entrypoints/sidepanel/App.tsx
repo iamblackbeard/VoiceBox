@@ -64,7 +64,7 @@ export default function App() {
       {/* Interactive sentence stream — replaces the old NowReading text dump */}
       <section
         aria-label="Now reading"
-        className="flex min-h-0 flex-1 flex-col gap-3 rounded-3xl border border-border bg-surface p-5 shadow-lg shadow-accent/10"
+        className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden rounded-3xl border border-border bg-surface p-5 shadow-lg shadow-accent/10"
       >
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">
           Now reading

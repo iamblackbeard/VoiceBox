@@ -72,3 +72,4 @@ Activity mode: [live app and editor, explicit static fallback, focused alternati
 
 ## Revisions
 
+- **SentenceList layout → flowing prose** (after slice 1 learner check): The original card-list layout was replaced with inline flowing prose. Sentences are now `<span>` elements inside a `<p>`, preserving natural paragraph reading flow. Hover highlights the hovered sentence; the active sentence glows in accent color; past sentences dim. Behavior (click-to-seek, active tracking, scroll-into-view) is unchanged. No scope, PRD, or spec change needed — this is a pure visual refinement within the existing component boundary.
