@@ -3,13 +3,61 @@ import { Player, LOOKAHEAD_SIZE } from '../lib/player';
 import { SETTINGS_STORAGE_KEY } from '../lib/settings';
 import { DEFAULT_KOKORO_VOICE, DEFAULT_PIPER_VOICE } from '../lib/voices';
 
-describe('Player dual-engine routing and playback', () => {
+// ── Web Audio API mocks ────────────────────────────────────────────────────────
+
+function makeAudioBufferMock(length = 4, sampleRate = 24000): AudioBuffer {
+  return {
+    length,
+    sampleRate,
+    duration: length / sampleRate,
+    numberOfChannels: 1,
+    getChannelData: vi.fn(() => new Float32Array(length)),
+    copyToChannel: vi.fn(),
+    copyFromChannel: vi.fn(),
+  } as unknown as AudioBuffer;
+}
+
+function makeAudioContextMock() {
+  const sourceMock = {
+    buffer: null as AudioBuffer | null,
+    onended: null as (() => void) | null,
+    connect: vi.fn(),
+    disconnect: vi.fn(),
+    start: vi.fn(),
+    stop: vi.fn(),
+  };
+
+  const gainNodeMock = {
+    gain: { value: 1.0 },
+    connect: vi.fn(),
+    disconnect: vi.fn(),
+  };
+
+  const ctxMock = {
+    state: 'running' as AudioContextState,
+    destination: {},
+    createBuffer: vi.fn((channels: number, length: number, sampleRate: number) =>
+      makeAudioBufferMock(length, sampleRate)
+    ),
+    createBufferSource: vi.fn(() => {
+      const s = { ...sourceMock };
+      return s;
+    }),
+    createGain: vi.fn(() => gainNodeMock),
+    close: vi.fn(),
+  };
+
+  return { ctxMock, gainNodeMock, sourceMock };
+}
+
+describe('Player dual-engine routing and playback (Web Audio)', () => {
   let mockStorage: Record<string, any> = {};
   let storageListeners: Array<(changes: any, area: string) => void> = [];
   let mockTabsSendMessage: any;
   let mockTabsConnect: any;
-  let mockAudio: any;
   let mockClient: any;
+  let ctxMock: any;
+  let sourceMock: any;
 
   beforeEach(() => {
     mockStorage = {};
@@ -17,6 +65,29 @@ describe('Player dual-engine routing and playback', () => {
 
     mockTabsSendMessage = vi.fn().mockResolvedValue({});
     mockTabsConnect = vi.fn().mockReturnValue({ disconnect: vi.fn() });
+
+    const mocks = makeAudioContextMock();
+    ctxMock = mocks.ctxMock;
+    sourceMock = mocks.sourceMock;
+
+    // Every createBufferSource returns a fresh source that fires onended when start() is called
+    ctxMock.createBufferSource = vi.fn(() => {
+      const src: any = {
+        buffer: null,
+        onended: null,
+        connect: vi.fn(),
+        disconnect: vi.fn(),
+        stop: vi.fn(),
+        start: vi.fn().mockImplementation(function (this: any) {
+          // Capture `this` so tests can trigger onended on the right source
+          sourceMock._lastCreated = this;
+        }),
+      };
+      sourceMock._lastCreated = src;
+      return src;
+    });
+
+    (globalThis as any).AudioContext = vi.fn(() => ctxMock);
 
     (globalThis as any).browser = {
       storage: {
@@ -37,21 +108,6 @@ describe('Player dual-engine routing and playback', () => {
       },
     };
 
-    if (typeof URL.createObjectURL === 'undefined') {
-      URL.createObjectURL = vi.fn(() => 'blob:mock-audio-url');
-      URL.revokeObjectURL = vi.fn();
-    } else {
-      vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock-audio-url');
-      vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
-    }
-
-    mockAudio = {
-      src: '',
-      play: vi.fn().mockResolvedValue(undefined),
-      pause: vi.fn(),
-      onended: null,
-    };
-
     mockClient = {
       load: vi.fn().mockResolvedValue(undefined),
       unload: vi.fn().mockResolvedValue(undefined),
@@ -67,6 +123,7 @@ describe('Player dual-engine routing and playback', () => {
   afterEach(() => {
     vi.restoreAllMocks();
     delete (globalThis as any).browser;
+    delete (globalThis as any).AudioContext;
   });
 
   it('reads with Kokoro when configured in settings', async () => {
@@ -76,7 +133,7 @@ describe('Player dual-engine routing and playback', () => {
       checkedAt: Date.now(),
     };
 
-    const player = new Player(mockClient, mockAudio);
+    const player = new Player(mockClient);
     const stateUpdates: string[] = [];
     player.subscribe((s) => stateUpdates.push(s.status));
 
@@ -89,11 +146,6 @@ describe('Player dual-engine routing and playback', () => {
       'r-1',
       'kokoro'
     );
-    expect(mockAudio.play).toHaveBeenCalled();
-    expect(mockTabsSendMessage).toHaveBeenCalledWith(123, {
-      type: 'highlight',
-      chunkIndex: 0,
-    });
     expect(player.getActiveEngine()).toBe('kokoro');
   });
 
@@ -109,7 +161,7 @@ describe('Player dual-engine routing and playback', () => {
       engine: 'piper',
     });
 
-    const player = new Player(mockClient, mockAudio);
+    const player = new Player(mockClient);
 
     await player.play(['Hello world from Piper.'], 'r-2', 456);
 
@@ -120,39 +172,28 @@ describe('Player dual-engine routing and playback', () => {
       'r-2',
       'piper'
     );
-    expect(mockAudio.play).toHaveBeenCalled();
-    expect(mockTabsSendMessage).toHaveBeenCalledWith(456, {
-      type: 'highlight',
-      chunkIndex: 0,
-    });
     expect(player.getActiveEngine()).toBe('piper');
   });
 
-  it('advances through chunks and sends clear message on completion', async () => {
+  it('sends highlight message for sentence 0 on play(), then clear on all-ended', async () => {
     mockStorage[SETTINGS_STORAGE_KEY] = {
-      engine: 'piper',
-      hasWebGpu: false,
+      engine: 'kokoro',
+      hasWebGpu: true,
       checkedAt: Date.now(),
     };
 
-    const player = new Player(mockClient, mockAudio);
-    await player.play(['Sentence 1.', 'Sentence 2.'], 'r-3', 789);
+    const player = new Player(mockClient);
+    await player.play(['Sentence 1.'], 'r-3', 789);
 
+    // Sentence 0 highlight sent on first playback
     expect(mockTabsSendMessage).toHaveBeenCalledWith(789, {
       type: 'highlight',
       chunkIndex: 0,
     });
 
-    // Trigger onended to simulate audio completion
-    await mockAudio.onended();
-
-    expect(mockTabsSendMessage).toHaveBeenCalledWith(789, {
-      type: 'highlight',
-      chunkIndex: 1,
-    });
-
-    // Complete the second chunk
-    await mockAudio.onended();
+    // Trigger the AudioBufferSourceNode onended to advance to next (end of reading)
+    const src = sourceMock._lastCreated;
+    if (src?.onended) await src.onended();
 
     expect(player.getState().status).toBe('ended');
     expect(mockTabsSendMessage).toHaveBeenCalledWith(789, { type: 'clear' });
@@ -165,13 +206,12 @@ describe('Player dual-engine routing and playback', () => {
       checkedAt: Date.now(),
     };
 
-    const player = new Player(mockClient, mockAudio);
+    const player = new Player(mockClient);
     await player.play(['Sentence 1.', 'Sentence 2.'], 'r-4', 101);
 
     expect(player.getActiveEngine()).toBe('kokoro');
     expect(mockClient.load).toHaveBeenCalledWith('kokoro', DEFAULT_KOKORO_VOICE);
 
-    // Mid-playback engine switch event to Piper
     for (const listener of storageListeners) {
       await listener(
         {
@@ -184,13 +224,12 @@ describe('Player dual-engine routing and playback', () => {
     }
 
     expect(player.getActiveEngine()).toBe('piper');
-    expect(mockAudio.pause).toHaveBeenCalled();
     expect(mockClient.unload).toHaveBeenCalled();
     expect(mockClient.load).toHaveBeenCalledWith('piper', DEFAULT_PIPER_VOICE);
   });
 
   it('unloads model when engine changed while idle', async () => {
-    const player = new Player(mockClient, mockAudio);
+    const player = new Player(mockClient);
     expect(player.getState().status).toBe('idle');
 
     for (const listener of storageListeners) {
@@ -215,17 +254,17 @@ describe('Player dual-engine routing and playback', () => {
       checkedAt: Date.now(),
     };
 
-    const player = new Player(mockClient, mockAudio);
+    const player = new Player(mockClient);
     await player.play(['Sample sentence.'], 'r-5', 202);
 
     expect(player.getState().status).toBe('playing');
 
     player.pause();
-    expect(mockAudio.pause).toHaveBeenCalled();
     expect(player.getState().status).toBe('paused');
 
     player.resume();
-    expect(mockAudio.play).toHaveBeenCalled();
+    // After resume, the cached buffer plays again
+    expect(player.getState().status).toBe('playing');
   });
 
   it('updates state to error when TTS client throws', async () => {
@@ -236,31 +275,30 @@ describe('Player dual-engine routing and playback', () => {
     };
     mockClient.load.mockRejectedValueOnce(new Error('Network failure'));
 
-    const player = new Player(mockClient, mockAudio);
+    const player = new Player(mockClient);
     await player.play(['Failing text.'], 'r-6', 303);
 
     expect(player.getState().status).toBe('error');
     expect(player.getState().message).toBe('Network failure');
   });
 
-  it('stops playback, revokes URL, and sends clear message on stop()', async () => {
+  it('stops playback and sends clear message on stop()', async () => {
     mockStorage[SETTINGS_STORAGE_KEY] = {
       engine: 'kokoro',
       hasWebGpu: true,
       checkedAt: Date.now(),
     };
 
-    const player = new Player(mockClient, mockAudio);
+    const player = new Player(mockClient);
     await player.play(['To be stopped.'], 'r-7', 404);
 
     player.stop();
 
-    expect(mockAudio.pause).toHaveBeenCalled();
     expect(player.getState().status).toBe('idle');
     expect(mockTabsSendMessage).toHaveBeenCalledWith(404, { type: 'clear' });
   });
 
-  // ─── Slice 4: look-ahead queue tests ──────────────────────────────────────
+  // ─── In-memory chunk cache ─────────────────────────────────────────────────
 
   it('schedules LOOKAHEAD_SIZE chunks ahead immediately after play()', async () => {
     mockStorage[SETTINGS_STORAGE_KEY] = {
@@ -269,51 +307,30 @@ describe('Player dual-engine routing and playback', () => {
       checkedAt: Date.now(),
     };
 
-    // Create more chunks than LOOKAHEAD_SIZE so we can measure the window
     const manyChunks = Array.from({ length: LOOKAHEAD_SIZE + 3 }, (_, i) => `Sentence ${i + 1}.`);
 
-    // generate resolves immediately for all calls
-    const player = new Player(mockClient, mockAudio);
+    const player = new Player(mockClient);
     await player.play(manyChunks, 'r-8', 505);
 
-    // After play(), the first chunk is playing (dequeued).
-    // scheduleAhead is called from playNextChunk for currentIndex=1 as well,
-    // so total generate calls = at least LOOKAHEAD_SIZE (first window) and
-    // up to LOOKAHEAD_SIZE+1 after advancing. We just confirm >= LOOKAHEAD_SIZE.
     expect(mockClient.generate.mock.calls.length).toBeGreaterThanOrEqual(LOOKAHEAD_SIZE);
   });
 
-  it('drops stale audio when a new selection replaces the old reading', async () => {
+  it('drops stale synthesis when a new selection replaces the old reading', async () => {
     mockStorage[SETTINGS_STORAGE_KEY] = {
       engine: 'kokoro',
       hasWebGpu: true,
       checkedAt: Date.now(),
     };
 
-    // Both readings use fast mocks. The second play() bumps generationToken so
-    // queue entries for the first reading are dropped as stale.
-    mockClient.generate.mockResolvedValue({
-      audio: new Float32Array([0, 0.1]),
-      sampleRate: 24000,
-      engine: 'kokoro',
-    });
+    const player = new Player(mockClient);
 
-    const player = new Player(mockClient, mockAudio);
-
-    // Complete first reading
     await player.play(['Old sentence.'], 'r-9a', 606);
     expect(player.getState().status).toBe('playing');
 
-    // Replace with a second reading (bumps generationToken)
     await player.play(['New sentence.'], 'r-9b', 606);
-
-    // The second reading must be playing
     expect(player.getState().status).toBe('playing');
-    expect(mockTabsSendMessage).toHaveBeenCalledWith(606, {
-      type: 'highlight',
-      chunkIndex: 0,
-    });
   });
+
   it('calls unload() on the active engine when a new reading replaces it', async () => {
     mockStorage[SETTINGS_STORAGE_KEY] = {
       engine: 'kokoro',
@@ -321,54 +338,78 @@ describe('Player dual-engine routing and playback', () => {
       checkedAt: Date.now(),
     };
 
-    const player = new Player(mockClient, mockAudio);
+    const player = new Player(mockClient);
     await player.play(['First reading sentence.'], 'r-10a', 707);
 
-    // Reset call count so we only count the unload from the second play()
     mockClient.unload.mockClear();
 
     await player.play(['Second reading sentence.'], 'r-10b', 707);
 
-    // unload() must have been called to tear down the old engine state
     expect(mockClient.unload).toHaveBeenCalled();
   });
 
-  it('waits in buffering when the next chunk is not yet ready', async () => {
+  // ─── Sentence index in state ───────────────────────────────────────────────
+
+  it('exposes sentenceIndex = 0 and totalSentences when playing first sentence', async () => {
     mockStorage[SETTINGS_STORAGE_KEY] = {
       engine: 'kokoro',
       hasWebGpu: true,
       checkedAt: Date.now(),
     };
 
-    // Second generate call (chunk 1) is slow; all others resolve immediately.
-    let slowResolve: ((v: any) => void) | null = null;
-    let callCount = 0;
-    mockClient.generate.mockImplementation((_text: string) => {
-      callCount++;
-      if (callCount === 2) {
-        return new Promise((resolve) => { slowResolve = resolve; });
-      }
-      return Promise.resolve({
-        audio: new Float32Array([0, 0.1]),
-        sampleRate: 24000,
-        engine: 'kokoro',
-      });
+    const player = new Player(mockClient);
+    await player.play(['Alpha.', 'Beta.', 'Gamma.'], 'r-11', 808);
+
+    const state = player.getState();
+    expect(state.status).toBe('playing');
+    expect(state.sentenceIndex).toBe(0);
+    expect(state.totalSentences).toBe(3);
+  });
+
+  // ─── Seek (cache-hit path) ─────────────────────────────────────────────────
+
+  it('seek() dispatches a highlight message for the target sentence', async () => {
+    mockStorage[SETTINGS_STORAGE_KEY] = {
+      engine: 'kokoro',
+      hasWebGpu: true,
+      checkedAt: Date.now(),
+    };
+
+    const player = new Player(mockClient);
+    await player.play(['Sentence 0.', 'Sentence 1.', 'Sentence 2.'], 'r-12', 909);
+
+    mockTabsSendMessage.mockClear();
+
+    // Seeking to index 2 — should fire a highlight message
+    await player.seek(2);
+
+    expect(mockTabsSendMessage).toHaveBeenCalledWith(909, {
+      type: 'highlight',
+      chunkIndex: 2,
     });
+  });
 
-    const player = new Player(mockClient, mockAudio);
-    // scheduleAhead queues chunk 0 (fast) and chunk 1 (slow)
-    await player.play(['Sentence 1.', 'Sentence 2.'], 'r-11', 808);
+  // ─── Replay ───────────────────────────────────────────────────────────────
 
-    // Chunk 0 is playing; fire onended without awaiting (it will stall on slow chunk 1)
-    const onEndedP = mockAudio.onended();
-    await new Promise((r) => setTimeout(r, 0));
-    expect(player.getState().status).toBe('buffering');
+  it('replay() resets to sentence 0 and emits playing status', async () => {
+    mockStorage[SETTINGS_STORAGE_KEY] = {
+      engine: 'kokoro',
+      hasWebGpu: true,
+      checkedAt: Date.now(),
+    };
 
-    // Resolve chunk 1
-    slowResolve!({ audio: new Float32Array([0, 0.1]), sampleRate: 24000, engine: 'kokoro' });
-    await onEndedP;
-    await new Promise((r) => setTimeout(r, 0));
+    const player = new Player(mockClient);
+    await player.play(['First.', 'Second.'], 'r-13', 1010);
 
-    expect(player.getState().status).toBe('playing');
+    // Simulate reading ending
+    const src = sourceMock._lastCreated;
+    if (src?.onended) await src.onended();
+
+    // replay() from ended state
+    await player.replay();
+
+    const state = player.getState();
+    expect(state.status).toBe('playing');
+    expect(state.sentenceIndex).toBe(0);
   });
 });

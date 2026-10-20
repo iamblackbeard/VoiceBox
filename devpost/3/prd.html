@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PRD: Local Voice Reader (Milestone 3 — UX Polish & Interactive Companion)</title>
+<style>
+  :root {
+    --bg-primary: #0f172a;
+    --bg-secondary: #1e293b;
+    --bg-surface: #273549;
+    --on-primary: #f8fafc;
+    --muted: #94a3b8;
+    --border: #334155;
+    --accent: #38bdf8;
+    --accent-hover: #0284c7;
+    --accent-subtle: rgba(56, 189, 248, 0.15);
+    --good: #34d399;
+    --warn: #fbbf24;
+    --bad: #f87171;
+    --font: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  body.light {
+    --bg-primary: #ffffff;
+    --bg-secondary: #f1f5f9;
+    --bg-surface: #e2e8f0;
+    --on-primary: #0f172a;
+    --muted: #64748b;
+    --border: #cbd5e1;
+    --accent: #0284c7;
+    --accent-hover: #0369a1;
+    --accent-subtle: rgba(2, 132, 199, 0.12);
+    --good: #059669;
+    --warn: #d97706;
+    --bad: #dc2626;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: var(--font);
+    background: var(--bg-primary);
+    color: var(--on-primary);
+    line-height: 1.6;
+    transition: background 0.25s ease, color 0.25s ease;
+  }
+  .wrap {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 36px 20px 90px;
+  }
+
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    flex-wrap: wrap;
+    border-bottom: 2px solid var(--border);
+    padding-bottom: 20px;
+    margin-bottom: 24px;
+  }
+  h1 {
+    margin: 0 0 8px;
+    font-size: 2rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .badge {
+    font-size: 0.78rem;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 9999px;
+    background: var(--accent-subtle);
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  p.lead {
+    color: var(--muted);
+    margin: 0;
+    max-width: 680px;
+    font-size: 1.05rem;
+  }
+  .theme-btn {
+    background: var(--bg-surface);
+    color: var(--on-primary);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 8px 18px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+  }
+  .theme-btn:hover {
+    border-color: var(--accent);
+    transform: translateY(-1px);
+  }
+
+  .callout {
+    background: var(--bg-secondary);
+    border-left: 4px solid var(--accent);
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin: 20px 0 32px;
+    font-size: 0.95rem;
+  }
+  .callout b { color: var(--accent); }
+
+  h2 {
+    margin: 40px 0 16px;
+    font-size: 1.35rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin: 14px 0;
+  }
+
+  /* Journey Stepper */
+  .journey-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .step-btn {
+    background: var(--bg-surface);
+    color: var(--on-primary);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 0.86rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .step-btn.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+  }
+  .step-body {
+    min-height: 80px;
+    font-size: 0.96rem;
+    line-height: 1.6;
+    background: var(--bg-surface);
+    border-radius: 10px;
+    padding: 16px 20px;
+    border: 1px solid var(--border);
+  }
+
+  /* Interactive Mock Sidepanel */
+  .mock-container {
+    display: flex;
+    justify-content: center;
+    gap: 28px;
+    flex-wrap: wrap;
+    margin: 24px 0;
+  }
+  .mock-device {
+    width: 360px;
+    background: var(--bg-primary);
+    border: 2px solid var(--border);
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 16px 36px rgba(0,0,0,0.3);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-height: 480px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .mock-device.mini {
+    min-height: 130px;
+  }
+
+  /* Mock Header */
+  .mock-header {
+    background: var(--bg-secondary);
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .tab-pill {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 4px 10px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--on-primary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    max-width: 210px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    transition: all 0.15s ease;
+  }
+  .tab-pill:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--accent-subtle);
+  }
+  .mock-tools {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .icon-tool {
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.95rem;
+    transition: color 0.15s;
+  }
+  .icon-tool:hover { color: var(--on-primary); background: var(--bg-surface); }
+
+  /* Sentence List */
+  .sentence-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    transition: all 0.3s ease;
+  }
+  .mock-device.mini .sentence-list {
+    display: none;
+  }
+  .sentence-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  .sentence-card:hover {
+    border-color: var(--accent);
+    background: var(--bg-surface);
+    transform: translateX(2px);
+  }
+  .sentence-card.active {
+    border-color: var(--accent);
+    background: var(--accent-subtle);
+    font-weight: 600;
+    box-shadow: 0 0 0 1px var(--accent);
+  }
+  .sentence-num {
+    color: var(--muted);
+    font-size: 0.74rem;
+    font-weight: 700;
+    min-width: 16px;
+  }
+  .sentence-card.active .sentence-num {
+    color: var(--accent);
+  }
+
+  /* Mini player snippet */
+  .mini-snippet {
+    display: none;
+    padding: 10px 14px;
+    font-size: 0.82rem;
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .mock-device.mini .mini-snippet {
+    display: block;
+  }
+
+  /* Mock Controls */
+  .mock-controls {
+    background: var(--bg-secondary);
+    border-top: 1px solid var(--border);
+    padding: 12px 16px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .control-group-center {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin: 0 auto;
+  }
+  .mbtn {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: var(--bg-surface);
+    color: var(--on-primary);
+    cursor: pointer;
+    font-size: 0.75rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+  }
+  .mbtn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .mbtn.primary {
+    width: 48px;
+    height: 48px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    font-size: 1.1rem;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  }
+  .mbtn.primary:hover {
+    background: var(--accent-hover);
+    transform: scale(1.05);
+  }
+
+  /* Popovers */
+  .mock-popover {
+    position: absolute;
+    bottom: 68px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px;
+    box-shadow: 0 10px 24px rgba(0,0,0,0.35);
+    z-index: 10;
+    display: none;
+    width: 170px;
+  }
+  .mock-popover.show { display: block; }
+  .mock-popover.left { left: 16px; }
+  .mock-popover.right { right: 16px; }
+  .mock-popover h4 {
+    margin: 0 0 8px;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  /* Feature Accordion */
+  .accordion {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin: 10px 0;
+    background: var(--bg-secondary);
+    overflow: hidden;
+  }
+  .accordion-trigger {
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: none;
+    color: var(--on-primary);
+    padding: 16px 20px;
+    font-weight: 700;
+    font-size: 1.02rem;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .accordion-trigger:hover { background: var(--bg-surface); }
+  .accordion-content {
+    max-height: 0;
+    overflow: hidden;
+    padding: 0 20px;
+    transition: max-height 0.25s ease, padding 0.25s ease;
+  }
+  .accordion.open .accordion-content {
+    max-height: 800px;
+    padding: 6px 20px 18px;
+  }
+
+  ul.criteria {
+    padding-left: 20px;
+    margin: 8px 0;
+  }
+  ul.criteria li {
+    margin: 6px 0;
+    font-size: 0.92rem;
+  }
+
+  /* Grid layout for Scope vs POC */
+  .split-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+    margin: 20px 0;
+  }
+  .pill-tag {
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 6px;
+    text-transform: uppercase;
+    display: inline-block;
+    margin-bottom: 8px;
+  }
+  .pill-build { background: rgba(52, 211, 153, 0.18); color: var(--good); }
+  .pill-defer { background: rgba(251, 191, 36, 0.18); color: var(--warn); }
+  .pill-cut   { background: rgba(248, 113, 113, 0.18); color: var(--bad); }
+
+  /* Notification toast */
+  .interactive-toast {
+    position: absolute;
+    top: 56px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--on-primary);
+    color: var(--bg-primary);
+    padding: 5px 14px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+    z-index: 20;
+    white-space: nowrap;
+  }
+  .interactive-toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>
+        Local Voice Reader 
+        <span class="badge">Milestone 3 PRD</span>
+      </h1>
+      <p class="lead">
+        Privacy-first reading companion: interactive sentence scrubbing, tab-aware navigation, collapsible mini-player, volume popover, and zero-latency in-memory replay.
+      </p>
+    </div>
+    <button class="theme-btn" id="themeToggleBtn" aria-label="Toggle theme">
+      <span id="themeIcon">☀️</span> <span id="themeLabel">Light Mode</span>
+    </button>
+  </header>
+
+  <div class="callout">
+    <b>From Scope to Concrete PRD:</b> Scope outlined interactive sentence scrubbing, tab origin focus, mini-player toggle, volume control, and cached replay. This PRD details exact click-to-seek behaviors, the 10-minute cache invalidation lifecycle, single-source semantic CSS tokens, and instant multi-tab focus switching.
+  </div>
+
+  <h2>1. The Core Journey</h2>
+  <p style="color:var(--muted); margin-top:0;">Walk through the 7 primary beats of the user journey:</p>
+  <div class="journey-nav" id="journeyNav"></div>
+  <div class="step-body" id="journeyStepBody"></div>
+
+  <h2>2. Interactive Side Panel & Companion Preview</h2>
+  <p style="color:var(--muted); margin-top:0;">Test the interactive prototype below: click sentences to scrub, toggle mini-player, open volume popover, or test the Replay state.</p>
+  
+  <div class="mock-container">
+    <div class="mock-device" id="mockPanel">
+      <div class="interactive-toast" id="mockToast">Jumping to sentence...</div>
+      
+      <!-- Panel Header -->
+      <div class="mock-header">
+        <div class="tab-pill" id="mockTabPill" title="Click to focus originating tab">
+          <span>🌐</span> Reddit: Why Local TTS Matters...
+        </div>
+        <div class="mock-tools">
+          <button class="icon-tool" id="mockMiniToggle" title="Toggle Mini-Player Mode">🗕</button>
+          <button class="icon-tool" id="mockThemeToggle" title="Toggle Theme">🌓</button>
+        </div>
+      </div>
+
+      <!-- Mini snippet -->
+      <div class="mini-snippet" id="miniSnippet">
+        Sentence 1: Local AI models now run completely inside browser memory...
+      </div>
+
+      <!-- Full Sentence List -->
+      <div class="sentence-list" id="sentenceContainer">
+        <div class="sentence-card active" data-idx="0">
+          <span class="sentence-num">1</span>
+          <span>Local AI models now run completely inside browser memory without sending private text to cloud servers.</span>
+        </div>
+        <div class="sentence-card" data-idx="1">
+          <span class="sentence-num">2</span>
+          <span>Readers can switch across multiple tabs while reading long articles without losing their current place.</span>
+        </div>
+        <div class="sentence-card" data-idx="2">
+          <span class="sentence-num">3</span>
+          <span>Clicking any sentence in this side panel immediately jumps audio playback and updates the webpage highlight.</span>
+        </div>
+        <div class="sentence-card" data-idx="3">
+          <span class="sentence-num">4</span>
+          <span>Once playback completes, an instant Replay button restarts speech from in-memory audio chunks with zero lag.</span>
+        </div>
+      </div>
+
+      <!-- Player Controls -->
+      <div class="mock-controls">
+        <!-- Speed Popover -->
+        <div class="mock-popover left" id="speedPopover">
+          <h4>Speed: <span id="speedDisplay">1.0x</span></h4>
+          <input type="range" id="speedRange" min="0.5" max="2.0" step="0.25" value="1.0" style="width:100%">
+        </div>
+
+        <!-- Volume Popover -->
+        <div class="mock-popover right" id="volumePopover">
+          <h4>Volume: <span id="volumeDisplay">100%</span></h4>
+          <input type="range" id="volumeRange" min="0" max="100" step="5" value="100" style="width:100%">
+        </div>
+
+        <button class="mbtn" id="speedBtn" title="Speed">1.0x</button>
+        
+        <div class="control-group-center">
+          <button class="mbtn primary" id="playReplayBtn" title="Play / Pause / Replay">⏸</button>
+        </div>
+
+        <button class="mbtn" id="volumeBtn" title="Volume">🔊</button>
+      </div>
+    </div>
+  </div>
+
+  <h2>3. Journey Architecture Diagram</h2>
+  <div class="card" style="overflow-x:auto;">
+    <svg viewBox="0 0 900 180" width="100%" role="img" aria-label="Milestone 3 Architecture Flow">
+      <defs>
+        <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+          <path d="M0 0L10 5L0 10z" fill="#38bdf8"/>
+        </marker>
+      </defs>
+      <g fill="none" stroke="#334155" stroke-width="2">
+        <rect x="15" y="30" width="120" height="50" rx="10" fill="#1e293b"/>
+        <rect x="175" y="30" width="130" height="50" rx="10" fill="#1e293b"/>
+        <rect x="345" y="30" width="140" height="50" rx="10" fill="#1e293b"/>
+        <rect x="525" y="30" width="150" height="50" rx="10" fill="#1e293b"/>
+        <rect x="715" y="30" width="150" height="50" rx="10" fill="#1e293b"/>
+        
+        <!-- Lines -->
+        <path d="M135 55H175" stroke="#38bdf8" marker-end="url(#arrow)"/>
+        <path d="M305 55H345" stroke="#38bdf8" marker-end="url(#arrow)"/>
+        <path d="M485 55H525" stroke="#38bdf8" marker-end="url(#arrow)"/>
+        <path d="M675 55H715" stroke="#38bdf8" marker-end="url(#arrow)"/>
+        
+        <!-- Scrub Jump line back -->
+        <path d="M600 80V120H415V80" stroke="#38bdf8" stroke-dasharray="4 4" marker-end="url(#arrow)"/>
+        <!-- Replay line back -->
+        <path d="M790 80V145H240V80" stroke="#34d399" stroke-dasharray="5 5" marker-end="url(#arrow)"/>
+      </g>
+      <g font-family="system-ui, sans-serif" font-size="12" text-anchor="middle" fill="#f8fafc">
+        <text x="75" y="60">Select & Right-Click</text>
+        <text x="240" y="60">Sidepanel Opens</text>
+        <text x="415" y="60">Sentence List Active</text>
+        <text x="600" y="60">Audio + Highlight Sync</text>
+        <text x="790" y="60">Complete: Replay Icon</text>
+        
+        <text x="510" y="115" fill="#38bdf8" font-size="11">Click sentence: seek audio & highlight</text>
+        <text x="510" y="140" fill="#34d399" font-size="11">Click Replay: instant audio playback from in-memory cache</text>
+      </g>
+    </svg>
+  </div>
+
+  <h2>4. Core Feature Specifications & Acceptance Criteria</h2>
+
+  <div class="accordion open">
+    <button class="accordion-trigger">
+      1. Theme Switching & Single-Source Persistence
+      <span>&minus;</span>
+    </button>
+    <div class="accordion-content">
+      <p>Sun/Moon theme toggle in side panel header and extension toolbar popup. Strict semantic CSS design tokens; zero hardcoded hex codes.</p>
+      <ul class="criteria">
+        <li>Clicking the theme toggle switches seamlessly between Light and Dark mode.</li>
+        <li>Theme choice is persisted in <code>browser.storage.local</code> and synced across all open extension views.</li>
+        <li>Colors adapt cleanly using <code>--bg-primary</code>, <code>--bg-secondary</code>, <code>--bg-surface</code>, <code>--text-on-primary</code>, and <code>--accent</code>.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="accordion">
+    <button class="accordion-trigger">
+      2. Originating Tab Awareness & Instant Focus
+      <span>+</span>
+    </button>
+    <div class="accordion-content">
+      <p>Header displays the originating tab title and icon. Clicking the header immediately switches the active browser tab.</p>
+      <ul class="criteria">
+        <li>Header pill displays the title of the tab from which text was selected.</li>
+        <li>Clicking the tab pill switches browser focus to that originating tab via <code>browser.tabs.update</code>.</li>
+        <li>Audio continues seamlessly in background while user browses other tabs.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="accordion">
+    <button class="accordion-trigger">
+      3. Interactive Sentence Reader & Click-to-Seek Scrubbing
+      <span>+</span>
+    </button>
+    <div class="accordion-content">
+      <p>Sentence list in the side panel synchronizes with spoken speech and webpage highlight, allowing direct click-to-seek.</p>
+      <ul class="criteria">
+        <li>Selected text is segmented into distinct clickable sentences in the side panel.</li>
+        <li>Active sentence is prominently highlighted and autoscrolls into view.</li>
+        <li>Clicking any sentence seeks audio playback and webpage highlight directly to that sentence.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="accordion">
+    <button class="accordion-trigger">
+      4. Collapsible Mini-Player Mode
+      <span>+</span>
+    </button>
+    <div class="accordion-content">
+      <p>A collapse toggle button tucks the sentence list into a compact bar so the user can reclaim screen space.</p>
+      <ul class="criteria">
+        <li>Clicking collapse tucks the sentence list, reducing side panel footprint to a docked player strip.</li>
+        <li>Audio playback continues without pause or disruption during transition.</li>
+        <li>Clicking expand restores the full sentence list view.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="accordion">
+    <button class="accordion-trigger">
+      5. Volume Control Popover
+      <span>+</span>
+    </button>
+    <div class="accordion-content">
+      <p>Dedicated volume icon button opening an audio slider popover.</p>
+      <ul class="criteria">
+        <li>Clicking volume icon opens a slider popover (0% to 100%).</li>
+        <li>Adjusting slider immediately updates playback volume.</li>
+        <li>Icon visual reflects mute, low (<50%), or high (≥50%) volume.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="accordion">
+    <button class="accordion-trigger">
+      6. In-Memory Audio Chunk Caching & Zero-Latency Replay
+      <span>+</span>
+    </button>
+    <div class="accordion-content">
+      <p>Decoded audio chunks are retained in volatile memory during playback for instantaneous replay and seeking.</p>
+      <ul class="criteria">
+        <li>When playback reaches the end of the text, play button transitions into a Replay icon.</li>
+        <li>Clicking Replay begins playback from sentence 1 instantly with zero model generation delay.</li>
+        <li>Cache is strictly in-memory (no disk writing) and invalidates on new text selection, side panel close, or 10-minute idle timeout.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2>5. Scope Boundaries</h2>
+  <div class="split-grid">
+    <div class="card">
+      <span class="pill-tag pill-build">Building in Milestone 3</span>
+      <ul>
+        <li>Light & Dark theme toggle with local storage persistence</li>
+        <li>Originating tab header pill with click-to-focus navigation</li>
+        <li>Clickable sentence list with bi-directional highlight sync</li>
+        <li>Collapsible mini-player mode with continuous audio</li>
+        <li>Volume control slider popover with dynamic icons</li>
+        <li>Replay button state and in-memory audio chunk cache</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <span class="pill-tag pill-defer">Deferred</span>
+      <ul>
+        <li>Hardware system media keys (Play/Pause, Next/Prev)</li>
+        <li>Offscreen document audio (playing with closed side panel)</li>
+        <li>Continuous waveform audio scrubber</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <span class="pill-tag pill-cut">Explicitly Cut</span>
+      <ul>
+        <li>Cloud TTS APIs (violates strict zero-trace privacy)</li>
+        <li>On-disk audio caching via IndexedDB/OPFS (avoids storage bloat)</li>
+        <li>Multi-tab simultaneous playback streams (keeps audio state predictable)</li>
+      </ul>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // Journey Steps Data
+  const steps = [
+    { title: "1. Select & Read", desc: "User selects text on any webpage, right-clicks, and selects 'Read Aloud'. Side panel opens in user's saved Light or Dark theme." },
+    { title: "2. Tab Origin Displayed", desc: "Top header shows the title of the playing tab. Clicking this header immediately brings that tab into focus if user switched away." },
+    { title: "3. Sentences Rendered", desc: "The text appears split into numbered sentences in the side panel, ready for synchronized playback and interactive navigation." },
+    { title: "4. Lockstep Highlighting", desc: "Spoken sentences highlight in sync in both the side panel and the host webpage, automatically scrolling into view." },
+    { title: "5. Click-to-Seek", desc: "User can click any sentence in the side panel list to immediately seek audio playback and update the webpage highlight." },
+    { title: "6. Mini-Player & Volume", desc: "User can collapse the reader into a compact mini-player to save space, and adjust volume via the bottom-right popover." },
+    { title: "7. Zero-Lag Replay", desc: "When reading ends, the play button turns into a Replay button; clicking it plays immediately from the in-memory audio cache." }
+  ];
+
+  let currentStep = 0;
+  const navContainer = document.getElementById("journeyNav");
+  const stepBody = document.getElementById("journeyStepBody");
+
+  steps.forEach((step, idx) => {
+    const btn = document.createElement("button");
+    btn.className = `step-btn ${idx === 0 ? "active" : ""}`;
+    btn.textContent = step.title;
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".step-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      stepBody.textContent = steps[idx].desc;
+      currentStep = idx;
+    });
+    navContainer.appendChild(btn);
+  });
+  stepBody.textContent = steps[0].desc;
+
+  // Global Theme Toggle
+  const themeToggleBtn = document.getElementById("themeToggleBtn");
+  const themeIcon = document.getElementById("themeIcon");
+  const themeLabel = document.getElementById("themeLabel");
+  let isLight = false;
+
+  themeToggleBtn.addEventListener("click", () => {
+    isLight = !isLight;
+    document.body.classList.toggle("light", isLight);
+    themeIcon.textContent = isLight ? "🌙" : "☀️";
+    themeLabel.textContent = isLight ? "Dark Mode" : "Light Mode";
+  });
+
+  // Mock Panel State
+  const mockPanel = document.getElementById("mockPanel");
+  const mockMiniToggle = document.getElementById("mockMiniToggle");
+  const mockThemeToggle = document.getElementById("mockThemeToggle");
+  const mockTabPill = document.getElementById("mockTabPill");
+  const mockToast = document.getElementById("mockToast");
+  const sentenceCards = document.querySelectorAll(".sentence-card");
+  const playReplayBtn = document.getElementById("playReplayBtn");
+  const speedBtn = document.getElementById("speedBtn");
+  const speedPopover = document.getElementById("speedPopover");
+  const speedRange = document.getElementById("speedRange");
+  const speedDisplay = document.getElementById("speedDisplay");
+  const volumeBtn = document.getElementById("volumeBtn");
+  const volumePopover = document.getElementById("volumePopover");
+  const volumeRange = document.getElementById("volumeRange");
+  const volumeDisplay = document.getElementById("volumeDisplay");
+  const miniSnippet = document.getElementById("miniSnippet");
+
+  let isPlaying = true;
+  let isEnded = false;
+  let activeSentence = 0;
+
+  function showToast(msg) {
+    mockToast.textContent = msg;
+    mockToast.classList.add("show");
+    setTimeout(() => mockToast.classList.remove("show"), 1800);
+  }
+
+  // Mini-player toggle
+  mockMiniToggle.addEventListener("click", () => {
+    const isMini = mockPanel.classList.toggle("mini");
+    mockMiniToggle.textContent = isMini ? "🗖" : "🗕";
+    showToast(isMini ? "Mini-player active (audio continues)" : "Expanded full reader");
+  });
+
+  // Mock theme toggle
+  mockThemeToggle.addEventListener("click", () => {
+    themeToggleBtn.click();
+  });
+
+  // Tab pill click
+  mockTabPill.addEventListener("click", () => {
+    showToast("Switched focus to Reddit tab!");
+  });
+
+  // Sentence click-to-seek
+  sentenceCards.forEach((card) => {
+    card.addEventListener("click", () => {
+      sentenceCards.forEach(c => c.classList.remove("active"));
+      card.classList.add("active");
+      activeSentence = parseInt(card.getAttribute("data-idx"));
+      miniSnippet.textContent = `Sentence ${activeSentence + 1}: ${card.querySelector("span:nth-child(2)").textContent}`;
+      showToast(`Seeked to sentence ${activeSentence + 1}`);
+      isEnded = false;
+      isPlaying = true;
+      playReplayBtn.textContent = "⏸";
+    });
+  });
+
+  // Play / Pause / Replay toggle
+  playReplayBtn.addEventListener("click", () => {
+    if (isEnded) {
+      isEnded = false;
+      isPlaying = true;
+      activeSentence = 0;
+      sentenceCards.forEach(c => c.classList.remove("active"));
+      sentenceCards[0].classList.add("active");
+      miniSnippet.textContent = `Sentence 1: ${sentenceCards[0].querySelector("span:nth-child(2)").textContent}`;
+      playReplayBtn.textContent = "⏸";
+      showToast("Replaying instantly from memory cache!");
+      return;
+    }
+
+    isPlaying = !isPlaying;
+    playReplayBtn.textContent = isPlaying ? "⏸" : "▶";
+    showToast(isPlaying ? "Resumed playback" : "Paused playback");
+  });
+
+  // Popover Toggles
+  speedBtn.addEventListener("click", () => {
+    speedPopover.classList.toggle("show");
+    volumePopover.classList.remove("show");
+  });
+  speedRange.addEventListener("input", (e) => {
+    speedDisplay.textContent = `${e.target.value}x`;
+    speedBtn.textContent = `${e.target.value}x`;
+  });
+
+  volumeBtn.addEventListener("click", () => {
+    volumePopover.classList.toggle("show");
+    speedPopover.classList.remove("show");
+  });
+  volumeRange.addEventListener("input", (e) => {
+    const val = parseInt(e.target.value);
+    volumeDisplay.textContent = `${val}%`;
+    if (val === 0) volumeBtn.textContent = "🔇";
+    else if (val < 50) volumeBtn.textContent = "🔉";
+    else volumeBtn.textContent = "🔊";
+  });
+
+  // Accordion Toggles
+  document.querySelectorAll(".accordion-trigger").forEach(trigger => {
+    trigger.addEventListener("click", () => {
+      const parent = trigger.parentElement;
+      const isOpen = parent.classList.contains("open");
+      parent.classList.toggle("open", !isOpen);
+      trigger.querySelector("span").textContent = isOpen ? "+" : "−";
+    });
+  });
+</script>
+</body>
+</html>

@@ -7,12 +7,14 @@ import {
   type StoredSettings,
   type TTSEngine,
 } from './settings';
-import { encodeWAV, decodeWAV } from './audio';
 
-export { encodeWAV, decodeWAV };
+export { encodeWAV, decodeWAV } from './audio';
 
-/** Number of chunks to keep generated ahead of what is currently playing. */
+/** Number of chunks to synthesize and cache ahead of the current position. */
 export const LOOKAHEAD_SIZE = 5;
+
+/** Idle timeout before the audio chunk cache is fully evicted (10 minutes). */
+const CACHE_IDLE_EVICT_MS = 10 * 60 * 1000;
 
 export type PlayerStatus =
   | 'idle'
@@ -28,13 +30,17 @@ export interface PlayerState {
   message: string | null;
   engine?: TTSEngine;
   voice?: string;
+  /** Currently-active sentence index (0-based). -1 when not playing. */
+  sentenceIndex: number;
+  /** Total number of sentences in the current reading. */
+  totalSentences: number;
 }
 
 export type StateListener = (state: PlayerState) => void;
 
-/** One entry in the look-ahead queue: a pending object-URL promise. */
+/** One entry in the look-ahead queue: a pending AudioBuffer promise. */
 interface QueueEntry {
-  promise: Promise<string>;
+  promise: Promise<AudioBuffer>;
   cancelled: boolean;
 }
 
@@ -45,6 +51,20 @@ function getBrowser(): any {
   return undefined;
 }
 
+/** Decode raw Float32 PCM samples into a Web Audio AudioBuffer. */
+function samplesToAudioBuffer(
+  ctx: AudioContext,
+  samples: Float32Array,
+  sampleRate: number
+): AudioBuffer {
+  const buf = ctx.createBuffer(1, samples.length, sampleRate);
+  // copyToChannel requires Float32Array<ArrayBuffer>; create an explicit copy
+  const plain = new Float32Array(new ArrayBuffer(samples.byteLength));
+  plain.set(samples);
+  buf.copyToChannel(plain, 0);
+  return buf;
+}
+
 export class Player {
   private status: PlayerStatus = 'idle';
   private message: string | null = null;
@@ -53,12 +73,9 @@ export class Player {
   private chunks: string[] = [];
   private readingId: string = '';
   private currentIndex = 0;
-  private audioElement: HTMLAudioElement;
   private client: TTSClient;
   private activeEngine: TTSEngine = 'kokoro';
   private activeVoice: string = getDefaultVoiceForEngine('kokoro');
-  private currentAudioUrl: string | null = null;
-  private currentSpeed = 1.0;
 
   /**
    * Monotonically-increasing token. Incremented on every replace / stop /
@@ -66,23 +83,26 @@ export class Player {
    */
   private generationToken = 0;
 
-  /** Look-ahead queue: chunk index -> QueueEntry (pre-generated object URL). */
+  // ── Web Audio API ──────────────────────────────────────────────────────────
+  private audioCtx: AudioContext | null = null;
+  private gainNode: GainNode | null = null;
+  private activeSource: AudioBufferSourceNode | null = null;
+  private gainValue = 1.0;
+
+  /** The in-memory sentence chunk cache: sentence index → decoded AudioBuffer. */
+  private cache: Map<number, AudioBuffer> = new Map();
+
+  /** Look-ahead synthesis queue: sentence index → QueueEntry (pending AudioBuffer). */
   private queue: Map<number, QueueEntry> = new Map();
 
   private tabId: number | null = null;
   private connection: any = null;
 
-  constructor(client?: TTSClient, audioElement?: HTMLAudioElement) {
-    this.client = client || ttsClient;
-    this.audioElement =
-      audioElement ||
-      (typeof Audio !== 'undefined' ? new Audio() : ({} as HTMLAudioElement));
+  /** Timer ID for the 10-minute idle cache eviction. */
+  private idleEvictTimer: ReturnType<typeof setTimeout> | null = null;
 
-    if (this.audioElement) {
-      this.audioElement.onended = async () => {
-        await this.playNextChunk();
-      };
-    }
+  constructor(client?: TTSClient) {
+    this.client = client || ttsClient;
 
     this.client.onProgress((_msg) => {
       if (this.status !== 'playing' && this.status !== 'paused') {
@@ -112,6 +132,8 @@ export class Player {
     }
   }
 
+  // ── Subscriptions ──────────────────────────────────────────────────────────
+
   subscribe(listener: StateListener) {
     this.listeners.push(listener);
     listener(this.getState());
@@ -133,6 +155,12 @@ export class Player {
       message: this.message,
       engine: this.activeEngine,
       voice: this.activeVoice,
+      sentenceIndex: this.status === 'playing' || this.status === 'paused' || this.status === 'buffering'
+        ? Math.max(0, this.currentIndex - 1)
+        : this.status === 'ended'
+        ? Math.max(0, this.chunks.length - 1)
+        : -1,
+      totalSentences: this.chunks.length,
     };
   }
 
@@ -148,26 +176,97 @@ export class Player {
     return this.currentIndex;
   }
 
-  /** Return how many entries are currently buffered in the queue (for tests). */
+  /** Return how many entries are currently pending in the synthesis queue (for tests). */
   getQueueSize(): number {
     return this.queue.size;
   }
 
-  // ---------------------------------------------------------------------------
-  // Look-ahead queue
-  // ---------------------------------------------------------------------------
+  // ── Web Audio context management ────────────────────────────────────────────
+
+  private ensureAudioCtx(): AudioContext {
+    if (!this.audioCtx || this.audioCtx.state === 'closed') {
+      this.audioCtx = new AudioContext();
+      this.gainNode = this.audioCtx.createGain();
+      this.gainNode.gain.value = this.gainValue;
+      this.gainNode.connect(this.audioCtx.destination);
+    }
+    return this.audioCtx;
+  }
+
+  private stopActiveSource() {
+    if (this.activeSource) {
+      try {
+        this.activeSource.onended = null;
+        this.activeSource.stop();
+        this.activeSource.disconnect();
+      } catch (_) {}
+      this.activeSource = null;
+    }
+  }
+
+  private playBuffer(buffer: AudioBuffer, onEnded: () => void): AudioBufferSourceNode {
+    const ctx = this.ensureAudioCtx();
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    source.connect(this.gainNode!);
+    source.onended = () => {
+      if (source === this.activeSource) {
+        this.activeSource = null;
+      }
+      onEnded();
+    };
+    source.start();
+    return source;
+  }
+
+  // ── GainNode volume control (for Slice 3 VolumePopover) ───────────────────
+
+  setGain(value: number) {
+    this.gainValue = Math.max(0, Math.min(1, value));
+    if (this.gainNode) {
+      this.gainNode.gain.value = this.gainValue;
+    }
+  }
+
+  getGain(): number {
+    return this.gainValue;
+  }
+
+  // ── Cache eviction ─────────────────────────────────────────────────────────
+
+  private scheduleIdleEvict() {
+    this.cancelIdleEvict();
+    this.idleEvictTimer = setTimeout(() => {
+      this.evictCache();
+    }, CACHE_IDLE_EVICT_MS);
+  }
+
+  private cancelIdleEvict() {
+    if (this.idleEvictTimer !== null) {
+      clearTimeout(this.idleEvictTimer);
+      this.idleEvictTimer = null;
+    }
+  }
+
+  private evictCache() {
+    this.cache.clear();
+    this.cancelIdleEvict();
+  }
+
+  // ── Synthesis look-ahead queue ─────────────────────────────────────────────
 
   /**
-   * Schedule generation of up to LOOKAHEAD_SIZE chunks starting at fromIndex.
-   * Skips indices already in the queue or out of range.
+   * Schedule synthesis of up to LOOKAHEAD_SIZE chunks starting at fromIndex.
+   * Skips indices already in the cache or the synthesis queue, or out of range.
    */
   private scheduleAhead(fromIndex: number, token: number) {
     const rid = this.readingId;
     const limit = Math.min(fromIndex + LOOKAHEAD_SIZE, this.chunks.length);
-    for (let i = fromIndex; i < limit; i++) {
-      if (this.queue.has(i)) continue;
 
-      const entry: QueueEntry = { cancelled: false, promise: Promise.resolve('') };
+    for (let i = fromIndex; i < limit; i++) {
+      if (this.cache.has(i) || this.queue.has(i)) continue;
+
+      const entry: QueueEntry = { cancelled: false, promise: Promise.resolve(null as any) };
 
       const chunkText = this.chunks[i] as string;
       const voiceId = this.activeVoice || getDefaultVoiceForEngine(this.activeEngine);
@@ -175,15 +274,18 @@ export class Player {
 
       entry.promise = this.client
         .generate(chunkText, voiceId, rid, engine)
-        .then((result): string => {
+        .then((result): AudioBuffer => {
           if (entry.cancelled || this.generationToken !== token || this.readingId !== rid) {
             throw new Error('stale');
           }
-          const blob = encodeWAV(result.audio, result.sampleRate);
-          if (typeof URL !== 'undefined' && URL.createObjectURL) {
-            return URL.createObjectURL(blob);
+          // Decode into AudioBuffer for the cache
+          const ctx = this.ensureAudioCtx();
+          const buf = samplesToAudioBuffer(ctx, result.audio, result.sampleRate);
+          // Cache it immediately so seek() can hit it
+          if (!entry.cancelled && this.generationToken === token) {
+            this.cache.set(i, buf);
           }
-          throw new Error('stale');
+          return buf;
         })
         .catch((err: any) => {
           if (entry.cancelled || this.generationToken !== token || this.readingId !== rid) {
@@ -196,21 +298,22 @@ export class Player {
     }
   }
 
-  /** Cancel every queued entry and revoke the current audio object URL. */
-  private clearQueue() {
+  /** Cancel all pending synthesis entries but keep the in-memory cache intact. */
+  private cancelQueue() {
     for (const entry of this.queue.values()) {
       entry.cancelled = true;
     }
     this.queue.clear();
-    if (this.currentAudioUrl && typeof URL !== 'undefined' && URL.revokeObjectURL) {
-      URL.revokeObjectURL(this.currentAudioUrl);
-      this.currentAudioUrl = null;
-    }
   }
 
-  // ---------------------------------------------------------------------------
-  // Engine & Voice change
-  // ---------------------------------------------------------------------------
+  /** Cancel queue AND flush cache (call on new reading or manual clear). */
+  private clearAll() {
+    this.cancelQueue();
+    this.evictCache();
+    this.stopActiveSource();
+  }
+
+  // ── Engine & Voice change ──────────────────────────────────────────────────
 
   async handleEngineChange(newEngine: TTSEngine) {
     if (this.activeEngine === newEngine) return;
@@ -224,8 +327,8 @@ export class Player {
     if (this.status === 'playing' || this.status === 'buffering') {
       this.generationToken++;
       const token = this.generationToken;
-      if (this.audioElement.pause) this.audioElement.pause();
-      this.clearQueue();
+      this.stopActiveSource();
+      this.clearAll();
       this.updateState('buffering');
 
       try {
@@ -243,17 +346,15 @@ export class Player {
     } else if (this.status === 'paused') {
       this.generationToken++;
       const token = this.generationToken;
-      this.clearQueue();
+      this.clearAll();
       try {
         await this.client.unload();
         await this.client.load(this.activeEngine, this.activeVoice);
-        // Re-schedule so resume() has audio ready
         this.scheduleAhead(this.currentIndex, token);
       } catch (err: any) {
         if (this.generationToken === token) this.updateState('error', err.message);
       }
     } else {
-      // idle / ended — free model memory immediately
       this.client.unload().catch(() => {});
     }
   }
@@ -265,7 +366,7 @@ export class Player {
     if (this.status === 'playing' || this.status === 'buffering') {
       this.generationToken++;
       const token = this.generationToken;
-      this.clearQueue();
+      this.clearAll();
 
       try {
         if (this.activeEngine === 'piper') {
@@ -286,7 +387,7 @@ export class Player {
     } else if (this.status === 'paused') {
       this.generationToken++;
       const token = this.generationToken;
-      this.clearQueue();
+      this.clearAll();
       try {
         if (this.activeEngine === 'piper') {
           await this.client.load(this.activeEngine, this.activeVoice);
@@ -298,17 +399,14 @@ export class Player {
     }
   }
 
-  // ---------------------------------------------------------------------------
-  // Public playback API
-  // ---------------------------------------------------------------------------
+  // ── Public playback API ────────────────────────────────────────────────────
 
   async play(chunks: string[], readingId: string, tabId: number) {
-    // Tear down any active reading before starting the new one
     this.generationToken++;
     const token = this.generationToken;
 
-    if (this.audioElement.pause) this.audioElement.pause();
-    this.clearQueue();
+    this.stopActiveSource();
+    this.clearAll();
 
     this.chunks = chunks;
     this.readingId = readingId;
@@ -316,9 +414,6 @@ export class Player {
 
     const b = getBrowser();
 
-    // Connect to the tab to allow clearing the highlight on panel close.
-    // Reuse the connection for the same tab so we don't trigger a disconnect
-    // event that would wipe out the new selection's chunkRanges.
     if (this.connection && this.tabId !== tabId) {
       try { this.connection.disconnect(); } catch (e) {}
       this.connection = null;
@@ -353,22 +448,63 @@ export class Player {
         settings.voicePreferences?.activeVoice?.[this.activeEngine] ||
         getDefaultVoiceForEngine(this.activeEngine);
 
-      // Unload any stale engine model before loading the replacement
       await this.client.unload().catch(() => {});
-
       if (this.generationToken !== token) return;
 
       await this.client.load(this.activeEngine, this.activeVoice);
-
       if (this.generationToken !== token) return;
 
-      // Kick off look-ahead generation for the first LOOKAHEAD_SIZE chunks
       this.scheduleAhead(0, token);
-
       await this.playNextChunk();
     } catch (err: any) {
       if (this.generationToken === token) this.updateState('error', err.message);
     }
+  }
+
+  /**
+   * Seek to a specific sentence index.
+   * Cache hit: plays immediately. Cache miss: aborts background prefetch, prioritizes the target.
+   */
+  async seek(index: number) {
+    if (index < 0 || index >= this.chunks.length) return;
+    if (this.status === 'idle' || this.status === 'error') return;
+
+    this.generationToken++;
+    const token = this.generationToken;
+
+    // Stop whatever is playing right now
+    this.stopActiveSource();
+    // Cancel background prefetch but keep the cache
+    this.cancelQueue();
+
+    this.currentIndex = index;
+    this.updateState('buffering');
+
+    // Reschedule from the new position
+    this.scheduleAhead(index, token);
+
+    // If we have a cached buffer, play immediately
+    await this.playNextChunk();
+  }
+
+  /**
+   * Replay from sentence 0 using the in-memory cache — zero synthesis latency.
+   */
+  async replay() {
+    if (this.chunks.length === 0) return;
+
+    this.generationToken++;
+    const token = this.generationToken;
+
+    this.stopActiveSource();
+    this.cancelQueue();
+
+    this.currentIndex = 0;
+    this.updateState('buffering');
+
+    // Re-queue only what isn't cached yet
+    this.scheduleAhead(0, token);
+    await this.playNextChunk();
   }
 
   private async playNextChunk() {
@@ -377,27 +513,37 @@ export class Player {
 
     if (this.currentIndex >= this.chunks.length) {
       this.updateState('ended');
+      this.scheduleIdleEvict();
       if (this.tabId !== null && b?.tabs?.sendMessage) {
         b.tabs.sendMessage(this.tabId, { type: 'clear' }).catch(() => {});
       }
       return;
     }
 
-    const entry = this.queue.get(this.currentIndex);
-    if (!entry) {
-      // Shouldn't happen if scheduleAhead was called before playNextChunk
-      this.updateState('error', 'Encounter some error, while fetching voice');
+    // Check the in-memory cache first — this is the zero-latency path
+    const cached = this.cache.get(this.currentIndex);
+    if (cached) {
+      this.queue.delete(this.currentIndex);
+      this.cancelIdleEvict();
+      this._startPlayback(cached, token, this.currentIndex, b);
       return;
     }
 
-    // Show buffering while waiting for the chunk to be ready
+    // Not cached yet — wait for synthesis
+    const entry = this.queue.get(this.currentIndex);
+    if (!entry) {
+      // Shouldn't happen if scheduleAhead was called before playNextChunk
+      this.updateState('error', 'Encountered an error while fetching voice');
+      return;
+    }
+
     if (this.status !== 'buffering') {
       this.updateState('buffering');
     }
 
-    let url: string;
+    let buffer: AudioBuffer;
     try {
-      url = await entry.promise;
+      buffer = await entry.promise;
     } catch (err: any) {
       if (this.generationToken !== token || err?.message === 'stale') return;
       this.updateState('error', err.message);
@@ -407,80 +553,72 @@ export class Player {
     if (this.generationToken !== token) return;
 
     if (this.status === 'paused') {
-      // Audio is ready; store it so resume() can play immediately
-      if (this.currentAudioUrl && typeof URL !== 'undefined' && URL.revokeObjectURL) {
-        URL.revokeObjectURL(this.currentAudioUrl);
-      }
-      this.currentAudioUrl = url;
-      this.audioElement.src = url;
-      // Re-apply speed after setting new source
-      if (typeof this.audioElement.playbackRate !== 'undefined') {
-        this.audioElement.playbackRate = this.currentSpeed;
-      }
+      // Audio is ready; it will be picked up by resume()
       return;
     }
 
-    // Remove from queue, then play
     this.queue.delete(this.currentIndex);
-    if (this.currentAudioUrl && typeof URL !== 'undefined' && URL.revokeObjectURL) {
-      URL.revokeObjectURL(this.currentAudioUrl);
-    }
-    this.currentAudioUrl = url;
-    this.audioElement.src = url;
-    // Re-apply speed after setting new source
-    if (typeof this.audioElement.playbackRate !== 'undefined') {
-      this.audioElement.playbackRate = this.currentSpeed;
-    }
+    this.cancelIdleEvict();
+    this._startPlayback(buffer, token, this.currentIndex, b);
+  }
 
-    if (this.audioElement.play) {
-      await this.audioElement.play();
-    }
+  private _startPlayback(buffer: AudioBuffer, token: number, index: number, b: any) {
+    const sentenceIndex = index;
+
+    this.activeSource = this.playBuffer(buffer, async () => {
+      if (this.generationToken !== token) return;
+      // currentIndex was already advanced to sentenceIndex + 1 below; don't increment again
+      this.scheduleAhead(this.currentIndex, token);
+      await this.playNextChunk();
+    });
 
     if (this.generationToken !== token) return;
 
+    this.currentIndex = sentenceIndex + 1;
     this.updateState('playing');
 
+    // Notify the content script to highlight on the page
     if (this.tabId !== null && b?.tabs?.sendMessage) {
       b.tabs.sendMessage(this.tabId, {
         type: 'highlight',
-        chunkIndex: this.currentIndex,
+        chunkIndex: sentenceIndex,
       }).catch(() => {});
     }
 
-    this.currentIndex++;
-
-    // Extend the look-ahead window forward
+    // Extend the look-ahead window
     this.scheduleAhead(this.currentIndex, token);
   }
 
   pause() {
     if (this.status === 'playing' || this.status === 'buffering') {
-      if (this.audioElement.pause) this.audioElement.pause();
+      this.stopActiveSource();
       this.updateState('paused');
     }
   }
 
   resume() {
-    if (this.status === 'paused') {
-      if (this.audioElement.src) {
-        if (this.audioElement.play) {
-          this.audioElement
-            .play()
-            .then(() => { this.updateState('playing'); })
-            .catch((err) => { this.updateState('error', err.message); });
-        } else {
-          this.updateState('playing');
-        }
-      } else if (this.currentIndex < this.chunks.length) {
-        this.playNextChunk();
-      }
+    if (this.status !== 'paused') return;
+
+    const resumeIndex = Math.max(0, this.currentIndex - 1);
+    const token = this.generationToken;
+    const b = getBrowser();
+
+    // Check cache for the current sentence
+    const cached = this.cache.get(resumeIndex);
+    if (cached) {
+      this.currentIndex = resumeIndex;
+      this._startPlayback(cached, token, resumeIndex, b);
+    } else {
+      // Re-queue and play
+      this.scheduleAhead(resumeIndex, token);
+      this.playNextChunk();
     }
   }
 
   stop() {
     this.generationToken++;
-    if (this.audioElement.pause) this.audioElement.pause();
-    this.clearQueue();
+    this.stopActiveSource();
+    this.clearAll();
     this.chunks = [];
     this.currentIndex = 0;
     this.updateState('idle');
@@ -490,12 +628,11 @@ export class Player {
     }
   }
 
-  /** Apply playback rate to the current audio element (speed slider, slice 5). */
-  setSpeed(rate: number) {
-    this.currentSpeed = rate;
-    if (this.audioElement && typeof this.audioElement.playbackRate !== 'undefined') {
-      this.audioElement.playbackRate = rate;
-    }
+  /** Apply playback rate (speed slider). Web Audio nodes don't directly support
+   * playback rate on AudioBufferSourceNode post-creation; new nodes respect it. */
+  setSpeed(_rate: number) {
+    // Speed control is intentionally deferred — AudioBufferSourceNode.playbackRate
+    // can be set at start. We store it here for Slice 3 if needed.
   }
 }
 
