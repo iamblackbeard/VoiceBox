@@ -144,6 +144,7 @@ describe('getOrInitializeSettings and saveEnginePreference', () => {
         activeVoice: { kokoro: 'af_bella', piper: 'en_US-lessac-medium' },
         favorites: { kokoro: ['af_bella'], piper: ['en_US-lessac-medium'] },
       },
+      onTabCloseAction: 'continue' as const,
     };
     mockStorage[SETTINGS_STORAGE_KEY] = cached;
 

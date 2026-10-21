@@ -1,15 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
 import { PENDING_READING_KEY, type PendingReading } from '@/lib/messages';
+import Header from './components/Header';
 import StatusBar from './components/StatusBar';
 import SentenceList from './components/SentenceList';
 import PlayerControls from './components/PlayerControls';
 import Toast from './components/Toast';
 import { player, type PlayerState } from '@/lib/player';
 import { chunkText } from '@/lib/chunker';
+import { getOrInitializeSettings, SETTINGS_STORAGE_KEY } from '@/lib/settings';
 
 export default function App() {
   const [reading, setReading] = useState<PendingReading | null>(null);
   const [chunks, setChunks] = useState<string[]>([]);
+  const [originTabClosed, setOriginTabClosed] = useState(false);
   const [playerState, setPlayerState] = useState<PlayerState>({
     status: 'idle',
     message: null,
@@ -17,6 +20,10 @@ export default function App() {
     totalSentences: 0,
   });
   const [speed, setSpeed] = useState(1.0);
+
+  // Keep a ref so the tabs.onRemoved listener always sees the current reading
+  const readingRef = useRef<PendingReading | null>(null);
+  readingRef.current = reading;
 
   useEffect(() => {
     return player.subscribe(setPlayerState);
@@ -30,6 +37,7 @@ export default function App() {
     const handleNewReading = (newReading: PendingReading) => {
       const parsed = chunkText(newReading.text);
       setReading(newReading);
+      setOriginTabClosed(false);
       setChunks(parsed);
       player.play(parsed, newReading.readingId, newReading.tabId);
     };
@@ -56,12 +64,43 @@ export default function App() {
     };
   }, []);
 
+  // Listen for the originating tab being closed and enforce the user's policy.
+  useEffect(() => {
+    const onTabRemoved = async (tabId: number) => {
+      const current = readingRef.current;
+      if (!current || current.tabId !== tabId) return;
+
+      let action = 'continue';
+      try {
+        const settings = await getOrInitializeSettings();
+        action = settings.onTabCloseAction;
+      } catch {
+        // fall back to 'continue'
+      }
+
+      setOriginTabClosed(true);
+
+      if (action === 'stop') {
+        player.pause();
+      }
+      // 'continue' → do nothing to the player; cached chunks keep playing
+    };
+
+    browser.tabs.onRemoved.addListener(onTabRemoved);
+    return () => {
+      browser.tabs.onRemoved.removeListener(onTabRemoved);
+    };
+  }, []);
+
   return (
     <main className="mx-auto flex h-full max-w-md flex-col gap-4 bg-primary p-5 text-on-primary">
       <h1 className="sr-only">Local Voice Reader</h1>
+
+      <Header reading={reading} originTabClosed={originTabClosed} />
+
       <StatusBar message={playerState.message} />
 
-      {/* Interactive sentence stream — replaces the old NowReading text dump */}
+      {/* Interactive sentence stream */}
       <section
         aria-label="Now reading"
         className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden rounded-3xl border border-border bg-surface p-5 shadow-lg shadow-accent/10"

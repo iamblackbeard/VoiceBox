@@ -23,12 +23,18 @@ export interface EngineSettings {
   checkedAt: number;      // Epoch timestamp when hardware was probed
 }
 
+export type TabCloseAction = 'stop' | 'continue';
+
 export interface StoredSettings extends EngineSettings {
   voicePreferences: VoicePreferences;
+  /** What happens when the originating tab is closed while audio plays. */
+  onTabCloseAction: TabCloseAction;
 }
+
 
 export const SETTINGS_STORAGE_KEY = 'engine_settings';
 export const MAX_FAVORITES_PER_ENGINE = 5;
+export const DEFAULT_TAB_CLOSE_ACTION: TabCloseAction = 'continue';
 
 export const DEFAULT_VOICE_PREFERENCES: VoicePreferences = {
   activeVoice: {
@@ -88,10 +94,11 @@ export async function getOrInitializeSettings(): Promise<StoredSettings> {
         hasWebGpu: existing.hasWebGpu,
         checkedAt: existing.checkedAt || Date.now(),
         voicePreferences,
+        onTabCloseAction: existing.onTabCloseAction === 'stop' ? 'stop' : DEFAULT_TAB_CLOSE_ACTION,
       };
 
-      // If existing lacked voicePreferences, persist the complete settings
-      if (!existing.voicePreferences) {
+      // If existing lacked voicePreferences or onTabCloseAction, persist the complete settings
+      if (!existing.voicePreferences || !existing.onTabCloseAction) {
         await b?.storage?.local?.set({ [SETTINGS_STORAGE_KEY]: completeSettings });
       }
 
@@ -116,7 +123,9 @@ export async function getOrInitializeSettings(): Promise<StoredSettings> {
         piper: [...DEFAULT_VOICE_PREFERENCES.favorites.piper],
       },
     },
+    onTabCloseAction: DEFAULT_TAB_CLOSE_ACTION,
   };
+
 
   try {
     await b?.storage?.local?.set({ [SETTINGS_STORAGE_KEY]: newSettings });
@@ -216,4 +225,15 @@ export async function toggleFavoriteVoice(
     await b?.storage?.local?.set({ [SETTINGS_STORAGE_KEY]: updated });
     return { settings: updated, added: true };
   }
+}
+
+/**
+ * Saves the user's preferred tab-close action and persists it to browser.storage.local.
+ */
+export async function saveTabCloseAction(action: TabCloseAction): Promise<StoredSettings> {
+  const current = await getOrInitializeSettings();
+  const updated: StoredSettings = { ...current, onTabCloseAction: action };
+  const b = getBrowser();
+  await b?.storage?.local?.set({ [SETTINGS_STORAGE_KEY]: updated });
+  return updated;
 }

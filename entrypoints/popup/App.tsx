@@ -1,11 +1,15 @@
 import { useEffect, useState } from 'react';
 import {
+
   getOrInitializeSettings,
   saveEnginePreference,
+  saveTabCloseAction,
   SETTINGS_STORAGE_KEY,
   type StoredSettings,
+  type TabCloseAction,
   type TTSEngine,
 } from '@/lib/settings';
+
 import {
   getDefaultVoiceForEngine,
   getVoiceById,
@@ -59,12 +63,21 @@ export default function App() {
 
   const handleSelectEngine = async (engine: TTSEngine) => {
     if (!settings || settings.engine === engine) return;
-    // Optimistic UI update
     setSettings({ ...settings, engine });
     try {
       await saveEnginePreference(engine);
     } catch (err) {
       console.error('[popup] Failed to persist engine choice:', err);
+    }
+  };
+
+  const handleTabCloseAction = async (action: TabCloseAction) => {
+    if (!settings || settings.onTabCloseAction === action) return;
+    setSettings({ ...settings, onTabCloseAction: action });
+    try {
+      await saveTabCloseAction(action);
+    } catch (err) {
+      console.error('[popup] Failed to persist tab close action:', err);
     }
   };
 
@@ -233,6 +246,31 @@ export default function App() {
           </span>
         </div>
       </button>
+
+      {/* Tab Navigation Policy */}
+      <section className="flex flex-col gap-1.5" aria-label="Tab Navigation Policy">
+        <span className="text-[11px] font-semibold text-on-surface uppercase tracking-wider">
+          When reading tab is closed
+        </span>
+        <div className="flex gap-2">
+          {(['continue', 'stop'] as TabCloseAction[]).map((action) => (
+            <button
+              key={action}
+              id={`tab-close-${action}`}
+              type="button"
+              onClick={() => handleTabCloseAction(action)}
+              className={[
+                'flex-1 rounded-lg border py-1.5 text-[11px] font-medium transition-all',
+                settings.onTabCloseAction === action
+                  ? 'border-accent bg-accent/10 text-accent'
+                  : 'border-border text-on-surface hover:bg-surface/50',
+              ].join(' ')}
+            >
+              {action === 'continue' ? 'Continue playing' : 'Stop playback'}
+            </button>
+          ))}
+        </div>
+      </section>
 
       {/* Footer / Status Note */}
       <footer className="pt-1 flex items-center justify-between text-[10px] text-on-surface">

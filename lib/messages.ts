@@ -15,7 +15,12 @@ export interface PendingReading {
   /** New for every "Read Aloud" click, so late results for an old reading can be dropped. */
   readingId: string;
   tabId: number;
-  /** The selected text. (Slice 2 turns this into sentence chunks.) */
+  windowId: number;
+  /** Page title of the originating tab. */
+  tabTitle: string;
+  /** Favicon URL of the originating tab (may be empty string). */
+  favIconUrl: string;
+  /** The selected text. */
   text: string;
 }
 

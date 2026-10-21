@@ -70,6 +70,9 @@ export default defineBackground(() => {
       const pending: PendingReading = {
         readingId: crypto.randomUUID(),
         tabId,
+        windowId: tab.windowId ?? -1,
+        tabTitle: tab.title ?? '',
+        favIconUrl: tab.favIconUrl ?? '',
         text,
       };
       await browser.storage.session.set({ [PENDING_READING_KEY]: pending });
