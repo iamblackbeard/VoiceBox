@@ -1,12 +1,17 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 /*
- * Every color in the side panel lives here, and only here.
+ * Every color in the extension lives here, and only here.
  * Components use the named roles through utilities such as `bg-primary`,
  * `text-on-primary`, `bg-surface`, `border-border` and `text-accent`.
  *
- * Light: white with navy accents.   Dark: deep navy / charcoal.
+ * Light: white with navy accents.   Dark: deep slate navy / charcoal.
  * The dark set overrides the SAME names, so no component changes between themes.
+ *
+ * Theme switching uses data-theme="light" | "dark" on <html>.
+ * The @media block below is the OS fallback when data-theme has not yet been set.
  */
 @theme {
   --color-primary: #ffffff;
@@ -16,13 +21,40 @@
   --color-accent: #1d3a8a;
   --color-on-accent: #ffffff;
   --color-border: #d3dbef;
+  --color-accent-subtle: rgba(29, 58, 138, 0.12);
 
   --font-sans: system-ui, sans-serif;
 }
 
-/* Follows the operating system / browser setting. There is no in-panel toggle. */
+/* ── Explicit light theme (JS-toggled) ───────────────────────────────────── */
+[data-theme="light"] {
+  --color-primary: #ffffff;
+  --color-on-primary: #0f1b3d;
+  --color-surface: #eef2fb;
+  --color-on-surface: #33426b;
+  --color-accent: #1d3a8a;
+  --color-on-accent: #ffffff;
+  --color-border: #d3dbef;
+  --color-accent-subtle: rgba(29, 58, 138, 0.12);
+  color-scheme: light;
+}
+
+/* ── Explicit dark theme (JS-toggled) ────────────────────────────────────── */
+[data-theme="dark"] {
+  --color-primary: #0c1224;
+  --color-on-primary: #eaf0ff;
+  --color-surface: #161f3a;
+  --color-on-surface: #aab8de;
+  --color-accent: #7c9cff;
+  --color-on-accent: #0c1224;
+  --color-border: #28365e;
+  --color-accent-subtle: rgba(124, 156, 255, 0.18);
+  color-scheme: dark;
+}
+
+/* ── OS fallback: used only when data-theme has not been set yet ─────────── */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme]) {
     --color-primary: #0c1224;
     --color-on-primary: #eaf0ff;
     --color-surface: #161f3a;
@@ -30,6 +62,8 @@
     --color-accent: #7c9cff;
     --color-on-accent: #0c1224;
     --color-border: #28365e;
+    --color-accent-subtle: rgba(124, 156, 255, 0.18);
+    color-scheme: dark;
   }
 }
 
@@ -46,4 +80,21 @@ body {
   font-family: var(--font-sans);
   /* Make native bits (scrollbars) follow the theme too. */
   color-scheme: light dark;
+}
+
+/* ── Smooth theme transition (150ms) ─────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  transition:
+    background-color 150ms ease,
+    color 150ms ease,
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+/* Disable transitions for elements that shouldn't animate (inputs, SVG) */
+input[type="range"],
+svg {
+  transition: none;
 }

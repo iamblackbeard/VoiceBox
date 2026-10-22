@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
+import { ThemeToggle } from '@/lib/ThemeToggle';
 import {
-
   getOrInitializeSettings,
   saveEnginePreference,
   saveTabCloseAction,
@@ -120,20 +120,23 @@ export default function App() {
           </h1>
           <span className="text-[11px] text-on-surface">TTS Engine Preference</span>
         </div>
-        <div
-          className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium border ${
-            hasWebGpu
-              ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
-              : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
-          }`}
-          title={hasWebGpu ? 'WebGPU acceleration detected' : 'WebGPU not detected on this device'}
-        >
-          <span
-            className={`w-1.5 h-1.5 rounded-full ${
-              hasWebGpu ? 'bg-emerald-500' : 'bg-amber-500'
+        <div className="flex items-center gap-2">
+          <div
+            className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium border ${
+              hasWebGpu
+                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
             }`}
-          />
-          {hasWebGpu ? 'WebGPU Ready' : 'CPU Only'}
+            title={hasWebGpu ? 'WebGPU acceleration detected' : 'WebGPU not detected on this device'}
+          >
+            <span
+              className={`w-1.5 h-1.5 rounded-full ${
+                hasWebGpu ? 'bg-emerald-500' : 'bg-amber-500'
+              }`}
+            />
+            {hasWebGpu ? 'WebGPU Ready' : 'CPU Only'}
+          </div>
+          <ThemeToggle id="popup-theme-toggle" />
         </div>
       </header>
 

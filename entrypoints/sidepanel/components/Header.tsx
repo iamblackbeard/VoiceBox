@@ -1,4 +1,5 @@
 import type { PendingReading } from '@/lib/messages';
+import { ThemeToggle } from '@/lib/ThemeToggle';
 
 interface HeaderProps {
   reading: PendingReading | null;
@@ -39,9 +40,8 @@ function Favicon({ src, title }: { src: string; title: string }) {
 
 /**
  * Side panel header row.
- * Shows the app name and an originating-tab pill that jumps focus back to the
- * reading tab when clicked. Gracefully degrades to a [Closed Tab] badge when
- * the source tab has been closed.
+ * Shows the app name, originating-tab pill that jumps focus back to the
+ * reading tab when clicked, and a Sun/Moon theme toggle button.
  */
 export default function Header({ reading, originTabClosed }: HeaderProps) {
   const handleTabPillClick = () => {
@@ -67,43 +67,48 @@ export default function Header({ reading, originTabClosed }: HeaderProps) {
         Listen
       </span>
 
-      {/* Originating tab pill */}
-      {reading && (
-        <button
-          id="origin-tab-pill"
-          type="button"
-          title={originTabClosed ? 'The source tab is closed' : `Go to: ${displayTitle}`}
-          aria-label={originTabClosed ? 'Source tab closed' : `Return to ${displayTitle}`}
-          disabled={originTabClosed}
-          onClick={handleTabPillClick}
-          className={[
-            'flex max-w-[180px] items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-all',
-            originTabClosed
-              ? 'cursor-not-allowed border-border text-on-surface opacity-60'
-              : 'cursor-pointer border-border bg-surface text-on-surface hover:border-accent hover:text-accent',
-          ].join(' ')}
-        >
-          {!originTabClosed && (
-            <Favicon src={reading.favIconUrl} title={displayTitle} />
-          )}
-          <span className="truncate">{displayTitle}</span>
-          {!originTabClosed && (
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 16 16"
-              fill="currentColor"
-              className="h-3 w-3 shrink-0 opacity-60"
-              aria-hidden="true"
-            >
-              <path
-                fillRule="evenodd"
-                d="M6.22 3.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L9.94 8 6.22 4.28a.75.75 0 0 1 0-1.06z"
-                clipRule="evenodd"
-              />
-            </svg>
-          )}
-        </button>
-      )}
+      <div className="flex items-center gap-2">
+        {/* Originating tab pill */}
+        {reading && (
+          <button
+            id="origin-tab-pill"
+            type="button"
+            title={originTabClosed ? 'The source tab is closed' : `Go to: ${displayTitle}`}
+            aria-label={originTabClosed ? 'Source tab closed' : `Return to ${displayTitle}`}
+            disabled={originTabClosed}
+            onClick={handleTabPillClick}
+            className={[
+              'flex max-w-[180px] items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-all',
+              originTabClosed
+                ? 'cursor-not-allowed border-border text-on-surface opacity-60'
+                : 'cursor-pointer border-border bg-surface text-on-surface hover:border-accent hover:text-accent',
+            ].join(' ')}
+          >
+            {!originTabClosed && (
+              <Favicon src={reading.favIconUrl} title={displayTitle} />
+            )}
+            <span className="truncate">{displayTitle}</span>
+            {!originTabClosed && (
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 16 16"
+                fill="currentColor"
+                className="h-3 w-3 shrink-0 opacity-60"
+                aria-hidden="true"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M6.22 3.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L9.94 8 6.22 4.28a.75.75 0 0 1 0-1.06z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            )}
+          </button>
+        )}
+
+        {/* Sun/Moon Theme Toggle */}
+        <ThemeToggle id="sidepanel-theme-toggle" />
+      </div>
     </header>
   );
 }

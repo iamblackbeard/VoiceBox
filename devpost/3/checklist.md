@@ -19,7 +19,7 @@ Build mode: learn
   Learner check: Select a 4–5 sentence paragraph on an article and click Read Aloud. Confirm each sentence appears as a distinct card in the side panel. Click sentence 3 while sentence 1 is playing and verify both voice and on-page highlight jump immediately. Let the passage finish, click the Replay button, and confirm it begins playing sentence 1 instantly with zero delay.
   Commit: `Implement interactive sentence scrubbing, in-memory chunk cache, and instant replay`
 
-- [ ] **2. Originating Tab Awareness, Jump Navigation & Tab Close Policy**
+- [x] **2. Originating Tab Awareness, Jump Navigation & Tab Close Policy**
   Becomes usable: The side panel header renders an originating tab pill with the active page title and favicon. Clicking this pill immediately switches the browser window and active tab back to the source webpage. Closing the source tab triggers the user-selected policy configured in popup settings (`stop` playback or `continue` playing existing cached chunks with a `[Closed Tab]` badge).
   Why now: Readers frequently switch across multiple tabs while listening. Establishing origin awareness right after the sentence reader gives users complete navigation control before adding secondary player modes.
   PRD ref: `prd.md > The Core Journey` (step 3), `prd.md > Originating Tab Awareness & Focus Navigation`, `prd.md > The Extension Toolbar Popup`
@@ -39,7 +39,7 @@ Build mode: learn
   Learner check: While audio is playing, click the volume button and drag the slider to verify immediate loudness adjustment. Then click the collapse button in the header—verify the panel shrinks to a sleek 64px mini bar while speech continues uninterrupted, and click expand to return to the full sentence list.
   Commit: `Add collapsible mini-player dock and volume control popover`
 
-- [ ] **4. Synchronized Sun/Moon Theme Engine across Side Panel & Toolbar Popup**
+- [x] **4. Synchronized Sun/Moon Theme Engine across Side Panel & Toolbar Popup**
   Becomes usable: A Sun/Moon toggle button in both the side panel header and toolbar popup lets the user switch between clean Light and dark Slate/Navy themes. The theme loads instantly before first paint without visual flicker, falls back gracefully to system `prefers-color-scheme`, and synchronizes bidirectionally across all open extension surfaces in real time.
   Why now: With all features and surfaces implemented, the semantic design tokens wrap the entire suite in a unified, accessible visual design adhering to strict contrast standards.
   PRD ref: `prd.md > The Core Journey` (step 2), `prd.md > Theme Switching and Single-Source Persistence`, `prd.md > Look and Feel`
