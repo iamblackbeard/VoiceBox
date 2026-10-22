@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { ThemeToggle } from '@/lib/ThemeToggle';
 import {
   getOrInitializeSettings,
+  recheckWebGpu,
   saveEnginePreference,
   saveTabCloseAction,
   SETTINGS_STORAGE_KEY,
@@ -25,6 +26,7 @@ function getBrowser(): any {
 export default function App() {
   const [settings, setSettings] = useState<StoredSettings | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isCheckingGpu, setIsCheckingGpu] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -60,6 +62,22 @@ export default function App() {
       }
     };
   }, []);
+
+  const handleRecheckWebGpu = async () => {
+    if (isCheckingGpu) return;
+    setIsCheckingGpu(true);
+    try {
+      const minDelayPromise = new Promise((resolve) => setTimeout(resolve, 350));
+      const [updated] = await Promise.all([recheckWebGpu(), minDelayPromise]);
+      if (settings && updated.hasWebGpu !== settings.hasWebGpu) {
+        setSettings(updated);
+      }
+    } catch (err) {
+      console.error('[popup] Failed to recheck WebGPU:', err);
+    } finally {
+      setIsCheckingGpu(false);
+    }
+  };
 
   const handleSelectEngine = async (engine: TTSEngine) => {
     if (!settings || settings.engine === engine) return;
@@ -121,21 +139,45 @@ export default function App() {
           <span className="text-[11px] text-on-surface">TTS Engine Preference</span>
         </div>
         <div className="flex items-center gap-2">
-          <div
-            className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium border ${
+          <button
+            type="button"
+            id="recheck-webgpu-btn"
+            onClick={handleRecheckWebGpu}
+            disabled={isCheckingGpu}
+            className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium border transition-all cursor-pointer hover:opacity-80 active:scale-95 disabled:cursor-wait ${
               hasWebGpu
                 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
                 : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
             }`}
-            title={hasWebGpu ? 'WebGPU acceleration detected' : 'WebGPU not detected on this device'}
+            title={
+              isCheckingGpu
+                ? 'Checking WebGPU availability...'
+                : hasWebGpu
+                ? 'WebGPU Ready (Click to re-check)'
+                : 'CPU Only (Click to re-check WebGPU)'
+            }
+            aria-label={
+              isCheckingGpu
+                ? 'Checking WebGPU availability'
+                : hasWebGpu
+                ? 'WebGPU Ready, click to re-check'
+                : 'CPU Only, click to re-check WebGPU'
+            }
           >
-            <span
-              className={`w-1.5 h-1.5 rounded-full ${
-                hasWebGpu ? 'bg-emerald-500' : 'bg-amber-500'
-              }`}
-            />
-            {hasWebGpu ? 'WebGPU Ready' : 'CPU Only'}
-          </div>
+            {isCheckingGpu ? (
+              <span
+                className="w-2.5 h-2.5 border-[1.5px] border-current border-t-transparent rounded-full animate-spin shrink-0"
+                aria-hidden="true"
+              />
+            ) : (
+              <span
+                className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                  hasWebGpu ? 'bg-emerald-500' : 'bg-amber-500'
+                }`}
+              />
+            )}
+            <span>{hasWebGpu ? 'WebGPU Ready' : 'CPU Only'}</span>
+          </button>
           <ThemeToggle id="popup-theme-toggle" />
         </div>
       </header>

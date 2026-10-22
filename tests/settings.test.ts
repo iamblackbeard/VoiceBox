@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { checkWebGpu } from '../lib/hardware';
 import {
   getOrInitializeSettings,
+  recheckWebGpu,
   saveEnginePreference,
   SETTINGS_STORAGE_KEY,
 } from '../lib/settings';
@@ -261,5 +262,87 @@ describe('getOrInitializeSettings and saveEnginePreference', () => {
     expect(res.error).toBeDefined();
     expect(res.settings.voicePreferences.favorites.kokoro).toHaveLength(5);
   });
+
+  describe('recheckWebGpu', () => {
+    it('updates hasWebGpu to true if WebGPU becomes available', async () => {
+      mockStorage[SETTINGS_STORAGE_KEY] = {
+        engine: 'piper',
+        hasWebGpu: false,
+        checkedAt: 100,
+        voicePreferences: {
+          activeVoice: { kokoro: 'af_heart', piper: 'en_US-hfc_female-medium' },
+          favorites: { kokoro: ['af_heart'], piper: ['en_US-hfc_female-medium'] },
+        },
+      };
+
+      Object.defineProperty(globalThis, 'navigator', {
+        value: {
+          gpu: {
+            requestAdapter: vi.fn().mockResolvedValue({}),
+          },
+        },
+        configurable: true,
+        writable: true,
+      });
+
+      const updated = await recheckWebGpu();
+      expect(updated.hasWebGpu).toBe(true);
+      expect(mockStorage[SETTINGS_STORAGE_KEY].hasWebGpu).toBe(true);
+    });
+
+    it('leaves settings unchanged if WebGPU is still unavailable', async () => {
+      const initialSettings = {
+        engine: 'piper' as const,
+        hasWebGpu: false,
+        checkedAt: 100,
+        voicePreferences: {
+          activeVoice: { kokoro: 'af_heart', piper: 'en_US-hfc_female-medium' },
+          favorites: { kokoro: ['af_heart'], piper: ['en_US-hfc_female-medium'] },
+        },
+        onTabCloseAction: 'continue' as const,
+      };
+      mockStorage[SETTINGS_STORAGE_KEY] = initialSettings;
+
+      Object.defineProperty(globalThis, 'navigator', {
+        value: {},
+        configurable: true,
+        writable: true,
+      });
+
+      const updated = await recheckWebGpu();
+      expect(updated.hasWebGpu).toBe(false);
+      expect(updated.checkedAt).toBe(100);
+      expect(mockStorage[SETTINGS_STORAGE_KEY]).toEqual(initialSettings);
+    });
+
+    it('leaves settings unchanged when WebGPU was already available and remains available', async () => {
+      const initialSettings = {
+        engine: 'kokoro' as const,
+        hasWebGpu: true,
+        checkedAt: 100,
+        voicePreferences: {
+          activeVoice: { kokoro: 'af_heart', piper: 'en_US-hfc_female-medium' },
+          favorites: { kokoro: ['af_heart'], piper: ['en_US-hfc_female-medium'] },
+        },
+        onTabCloseAction: 'continue' as const,
+      };
+      mockStorage[SETTINGS_STORAGE_KEY] = initialSettings;
+
+      Object.defineProperty(globalThis, 'navigator', {
+        value: {
+          gpu: {
+            requestAdapter: vi.fn().mockResolvedValue({}),
+          },
+        },
+        configurable: true,
+        writable: true,
+      });
+
+      const updated = await recheckWebGpu();
+      expect(updated.hasWebGpu).toBe(true);
+      expect(mockStorage[SETTINGS_STORAGE_KEY]).toEqual(initialSettings);
+    });
+  });
 });
+
 

@@ -237,3 +237,25 @@ export async function saveTabCloseAction(action: TabCloseAction): Promise<Stored
   await b?.storage?.local?.set({ [SETTINGS_STORAGE_KEY]: updated });
   return updated;
 }
+
+/**
+ * Re-probes the hardware for WebGPU support.
+ * If the availability changed, updates browser.storage.local and returns the updated StoredSettings.
+ * If unchanged, returns the current settings without modifying storage.
+ */
+export async function recheckWebGpu(): Promise<StoredSettings> {
+  const hasWebGpu = await checkWebGpu();
+  const current = await getOrInitializeSettings();
+  if (current.hasWebGpu === hasWebGpu) {
+    return current;
+  }
+  const updated: StoredSettings = {
+    ...current,
+    hasWebGpu,
+    checkedAt: Date.now(),
+  };
+  const b = getBrowser();
+  await b?.storage?.local?.set({ [SETTINGS_STORAGE_KEY]: updated });
+  return updated;
+}
+
