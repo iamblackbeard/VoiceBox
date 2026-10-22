@@ -20,6 +20,7 @@ function makeAudioBufferMock(length = 4, sampleRate = 24000): AudioBuffer {
 function makeAudioContextMock() {
   const sourceMock = {
     buffer: null as AudioBuffer | null,
+    playbackRate: { value: 1.0 },
     onended: null as (() => void) | null,
     connect: vi.fn(),
     disconnect: vi.fn(),
@@ -74,6 +75,7 @@ describe('Player dual-engine routing and playback (Web Audio)', () => {
     ctxMock.createBufferSource = vi.fn(() => {
       const src: any = {
         buffer: null,
+        playbackRate: { value: 1.0 },
         onended: null,
         connect: vi.fn(),
         disconnect: vi.fn(),
@@ -411,5 +413,92 @@ describe('Player dual-engine routing and playback (Web Audio)', () => {
     const state = player.getState();
     expect(state.status).toBe('playing');
     expect(state.sentenceIndex).toBe(0);
+  });
+
+  // ─── Speed Control ────────────────────────────────────────────────────────
+
+  it('updates getSpeed and clamps between 0.25 and 2.0', () => {
+    const player = new Player(mockClient);
+    expect(player.getSpeed()).toBe(1.0);
+
+    player.setSpeed(1.5);
+    expect(player.getSpeed()).toBe(1.5);
+
+    player.setSpeed(0.1);
+    expect(player.getSpeed()).toBe(0.25);
+
+    player.setSpeed(3.0);
+    expect(player.getSpeed()).toBe(2.0);
+  });
+
+  it('applies playbackRate to active source when setSpeed is called while playing', async () => {
+    mockStorage[SETTINGS_STORAGE_KEY] = {
+      engine: 'kokoro',
+      hasWebGpu: true,
+      checkedAt: Date.now(),
+    };
+
+    const player = new Player(mockClient);
+    await player.play(['Speed test sentence.'], 'r-speed-1', 111);
+
+    const activeSrc = sourceMock._lastCreated;
+    expect(activeSrc).toBeDefined();
+    expect(activeSrc.playbackRate.value).toBe(1.0);
+
+    player.setSpeed(1.75);
+    expect(activeSrc.playbackRate.value).toBe(1.75);
+  });
+
+  it('creates AudioBufferSourceNode with currentSpeed on playback', async () => {
+    mockStorage[SETTINGS_STORAGE_KEY] = {
+      engine: 'kokoro',
+      hasWebGpu: true,
+      checkedAt: Date.now(),
+    };
+
+    const player = new Player(mockClient);
+    player.setSpeed(1.25);
+
+    await player.play(['Preset speed sentence.'], 'r-speed-2', 222);
+
+    const activeSrc = sourceMock._lastCreated;
+    expect(activeSrc).toBeDefined();
+    expect(activeSrc.playbackRate.value).toBe(1.25);
+  });
+
+  it('preserves pitch on audioElement when speed is adjusted', async () => {
+    mockStorage[SETTINGS_STORAGE_KEY] = {
+      engine: 'kokoro',
+      hasWebGpu: true,
+      checkedAt: Date.now(),
+    };
+
+    const mockAudio: any = {
+      src: '',
+      playbackRate: 1.0,
+      preservesPitch: true,
+      volume: 1.0,
+      play: vi.fn().mockResolvedValue(undefined),
+      pause: vi.fn(),
+      onended: null,
+    };
+
+    const player = new Player(mockClient, mockAudio);
+    player.setSpeed(1.5);
+
+    expect(player.getSpeed()).toBe(1.5);
+    expect(mockAudio.playbackRate).toBe(1.5);
+    expect(mockAudio.preservesPitch).toBe(true);
+
+    await player.play(['Pitch test sentence.'], 'r-pitch-1', 333);
+
+    expect(mockAudio.playbackRate).toBe(1.5);
+    expect(mockAudio.preservesPitch).toBe(true);
+    expect(mockAudio.play).toHaveBeenCalled();
+
+    // Changing speed mid-reading must maintain preservesPitch = true
+    player.setSpeed(1.8);
+    expect(mockAudio.playbackRate).toBe(1.8);
+    expect(mockAudio.preservesPitch).toBe(true);
   });
 });

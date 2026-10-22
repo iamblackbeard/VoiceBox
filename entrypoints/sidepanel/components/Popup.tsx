@@ -38,7 +38,7 @@ export default function Popup({ children, anchorId, visible, onClose }: PopupPro
   return (
     <div
       ref={popupRef}
-      className="absolute bottom-full left-1/2 mb-2 -translate-x-1/2 rounded-lg border border-border bg-surface p-4 shadow-lg"
+      className="absolute bottom-full left-1/2 mb-2 -translate-x-1/2 rounded-lg border border-border bg-surface p-4 shadow-lg z-50"
       role="dialog"
       aria-modal="true"
     >

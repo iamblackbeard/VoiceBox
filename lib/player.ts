@@ -8,7 +8,8 @@ import {
   type TTSEngine,
 } from './settings';
 
-export { encodeWAV, decodeWAV } from './audio';
+import { encodeWAV, decodeWAV } from './audio';
+export { encodeWAV, decodeWAV };
 
 /** Number of chunks to synthesize and cache ahead of the current position. */
 export const LOOKAHEAD_SIZE = 5;
@@ -34,6 +35,8 @@ export interface PlayerState {
   sentenceIndex: number;
   /** Total number of sentences in the current reading. */
   totalSentences: number;
+  /** Current playback speed factor (e.g. 1.0, 1.5, 0.5). */
+  speed?: number;
 }
 
 export type StateListener = (state: PlayerState) => void;
@@ -76,6 +79,9 @@ export class Player {
   private client: TTSClient;
   private activeEngine: TTSEngine = 'kokoro';
   private activeVoice: string = getDefaultVoiceForEngine('kokoro');
+  private currentSpeed = 1.0;
+  private audioElement: HTMLAudioElement | null = null;
+  private currentAudioUrl: string | null = null;
 
   /**
    * Monotonically-increasing token. Incremented on every replace / stop /
@@ -101,8 +107,20 @@ export class Player {
   /** Timer ID for the 10-minute idle cache eviction. */
   private idleEvictTimer: ReturnType<typeof setTimeout> | null = null;
 
-  constructor(client?: TTSClient) {
+  constructor(client?: TTSClient, audioElement?: HTMLAudioElement) {
     this.client = client || ttsClient;
+    if (audioElement) {
+      this.audioElement = audioElement;
+    } else if (typeof Audio !== 'undefined') {
+      this.audioElement = new Audio();
+      this.audioElement.preservesPitch = true;
+      if ('mozPreservesPitch' in this.audioElement) {
+        (this.audioElement as any).mozPreservesPitch = true;
+      }
+      if ('webkitPreservesPitch' in this.audioElement) {
+        (this.audioElement as any).webkitPreservesPitch = true;
+      }
+    }
 
     this.client.onProgress((_msg) => {
       if (this.status !== 'playing' && this.status !== 'paused') {
@@ -161,6 +179,7 @@ export class Player {
         ? Math.max(0, this.chunks.length - 1)
         : -1,
       totalSentences: this.chunks.length,
+      speed: this.currentSpeed,
     };
   }
 
@@ -194,6 +213,14 @@ export class Player {
   }
 
   private stopActiveSource() {
+    if (this.audioElement) {
+      this.audioElement.onended = null;
+      this.audioElement.pause();
+    }
+    if (this.currentAudioUrl && typeof URL !== 'undefined' && URL.revokeObjectURL) {
+      URL.revokeObjectURL(this.currentAudioUrl);
+      this.currentAudioUrl = null;
+    }
     if (this.activeSource) {
       try {
         this.activeSource.onended = null;
@@ -208,6 +235,50 @@ export class Player {
     const ctx = this.ensureAudioCtx();
     const source = ctx.createBufferSource();
     source.buffer = buffer;
+    if (source.playbackRate) {
+      source.playbackRate.value = this.currentSpeed;
+    }
+
+    if (this.audioElement) {
+      if (this.currentAudioUrl && typeof URL !== 'undefined' && URL.revokeObjectURL) {
+        URL.revokeObjectURL(this.currentAudioUrl);
+        this.currentAudioUrl = null;
+      }
+      this.audioElement.pause();
+
+      const wavBlob = encodeWAV(buffer.getChannelData(0), buffer.sampleRate);
+      if (typeof URL !== 'undefined' && URL.createObjectURL) {
+        this.currentAudioUrl = URL.createObjectURL(wavBlob);
+        this.audioElement.src = this.currentAudioUrl;
+      }
+      this.audioElement.playbackRate = this.currentSpeed;
+      this.audioElement.preservesPitch = true;
+      if ('mozPreservesPitch' in this.audioElement) {
+        (this.audioElement as any).mozPreservesPitch = true;
+      }
+      if ('webkitPreservesPitch' in this.audioElement) {
+        (this.audioElement as any).webkitPreservesPitch = true;
+      }
+      this.audioElement.volume = this.gainValue;
+
+      const handleEnded = () => {
+        if (this.currentAudioUrl && typeof URL !== 'undefined' && URL.revokeObjectURL) {
+          URL.revokeObjectURL(this.currentAudioUrl);
+          this.currentAudioUrl = null;
+        }
+        if (this.activeSource === source) {
+          this.activeSource = null;
+        }
+        onEnded();
+      };
+
+      this.audioElement.onended = handleEnded;
+      source.onended = handleEnded;
+
+      this.audioElement.play().catch(() => {});
+      return source;
+    }
+
     source.connect(this.gainNode!);
     source.onended = () => {
       if (source === this.activeSource) {
@@ -219,12 +290,15 @@ export class Player {
     return source;
   }
 
-  // ── GainNode volume control (for Slice 3 VolumePopover) ───────────────────
+  // ── Volume control (GainNode & AudioElement) ───────────────────────────────
 
   setGain(value: number) {
     this.gainValue = Math.max(0, Math.min(1, value));
     if (this.gainNode) {
       this.gainNode.gain.value = this.gainValue;
+    }
+    if (this.audioElement) {
+      this.audioElement.volume = this.gainValue;
     }
   }
 
@@ -628,11 +702,28 @@ export class Player {
     }
   }
 
-  /** Apply playback rate (speed slider). Web Audio nodes don't directly support
-   * playback rate on AudioBufferSourceNode post-creation; new nodes respect it. */
-  setSpeed(_rate: number) {
-    // Speed control is intentionally deferred — AudioBufferSourceNode.playbackRate
-    // can be set at start. We store it here for Slice 3 if needed.
+  /** Apply playback rate (speed slider). Updates current speed with pitch preserved, and updates active playback immediately. */
+  setSpeed(rate: number) {
+    this.currentSpeed = Number.isFinite(rate) ? Math.max(0.25, Math.min(2.0, rate)) : 1.0;
+    if (this.audioElement) {
+      this.audioElement.playbackRate = this.currentSpeed;
+      this.audioElement.preservesPitch = true;
+      if ('mozPreservesPitch' in this.audioElement) {
+        (this.audioElement as any).mozPreservesPitch = true;
+      }
+      if ('webkitPreservesPitch' in this.audioElement) {
+        (this.audioElement as any).webkitPreservesPitch = true;
+      }
+    }
+    if (this.activeSource?.playbackRate) {
+      try {
+        this.activeSource.playbackRate.value = this.currentSpeed;
+      } catch (_) {}
+    }
+  }
+
+  getSpeed(): number {
+    return this.currentSpeed;
   }
 }
 

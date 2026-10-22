@@ -19,7 +19,7 @@ export default function App() {
     sentenceIndex: -1,
     totalSentences: 0,
   });
-  const [speed, setSpeed] = useState(1.0);
+  const [speed, setSpeed] = useState(() => player.getSpeed?.() ?? 1.0);
 
   // Keep a ref so the tabs.onRemoved listener always sees the current reading
   const readingRef = useRef<PendingReading | null>(null);
