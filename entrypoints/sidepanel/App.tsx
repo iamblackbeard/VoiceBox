@@ -96,7 +96,18 @@ export default function App() {
     <main className="mx-auto flex h-full max-w-md flex-col gap-4 bg-primary p-5 text-on-primary">
       <h1 className="sr-only">Local Voice Reader</h1>
 
-      <Header reading={reading} originTabClosed={originTabClosed} />
+      <Header
+        reading={reading}
+        originTabClosed={originTabClosed}
+        onClose={() => {
+          try {
+            player.pause();
+          } catch {}
+          if (typeof window !== 'undefined' && typeof window.close === 'function') {
+            window.close();
+          }
+        }}
+      />
 
       <StatusBar message={playerState.message} />
 

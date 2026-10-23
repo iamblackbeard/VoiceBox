@@ -1,10 +1,14 @@
 import type { PendingReading } from '@/lib/messages';
 import { ThemeToggle } from '@/lib/ThemeToggle';
+import { player } from '@/lib/player';
+import { CloseIcon } from './icons';
 
 interface HeaderProps {
   reading: PendingReading | null;
   /** Set to true when the originating tab has been closed. */
   originTabClosed: boolean;
+  /** Optional callback to close the side panel. */
+  onClose?: () => void;
 }
 
 /** Small favicon image with a graceful fallback to a generic page icon. */
@@ -41,9 +45,9 @@ function Favicon({ src, title }: { src: string; title: string }) {
 /**
  * Side panel header row.
  * Shows the app name, originating-tab pill that jumps focus back to the
- * reading tab when clicked, and a Sun/Moon theme toggle button.
+ * reading tab when clicked, a Sun/Moon theme toggle button, and a close (X) button.
  */
-export default function Header({ reading, originTabClosed }: HeaderProps) {
+export default function Header({ reading, originTabClosed, onClose }: HeaderProps) {
   const handleTabPillClick = () => {
     if (!reading || originTabClosed) return;
     browser.tabs
@@ -54,6 +58,19 @@ export default function Header({ reading, originTabClosed }: HeaderProps) {
         }
       })
       .catch((err) => console.warn('[Header] tabs.update failed:', err));
+  };
+
+  const handleClose = () => {
+    if (onClose) {
+      onClose();
+    } else {
+      try {
+        player.pause();
+      } catch {}
+      if (typeof window !== 'undefined' && typeof window.close === 'function') {
+        window.close();
+      }
+    }
   };
 
   const displayTitle = originTabClosed
@@ -108,7 +125,20 @@ export default function Header({ reading, originTabClosed }: HeaderProps) {
 
         {/* Sun/Moon Theme Toggle */}
         <ThemeToggle id="sidepanel-theme-toggle" />
+
+        {/* Close Button */}
+        <button
+          id="sidepanel-close-button"
+          type="button"
+          onClick={handleClose}
+          aria-label="Close side panel"
+          title="Close side panel"
+          className="flex h-7 w-7 items-center justify-center rounded-full border border-border bg-surface text-on-surface hover:border-accent hover:text-accent transition cursor-pointer shrink-0"
+        >
+          <CloseIcon />
+        </button>
       </div>
     </header>
   );
 }
+
