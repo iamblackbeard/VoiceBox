@@ -23,7 +23,7 @@ export const KOKORO_VOICES: Voice[] = [
     gender: 'Female',
     accent: 'American',
     style: 'Warm, expressive, balanced',
-    previewUrl: 'https://huggingface.co/hexgrad/Kokoro-82M/resolve/main/samples/af_heart_0.wav',
+    previewUrl: '/voice_sample/kokoro/af_heart.mp3',
   },
   {
     id: 'af_bella',
@@ -32,7 +32,7 @@ export const KOKORO_VOICES: Voice[] = [
     gender: 'Female',
     accent: 'American',
     style: 'Bright, energetic, crisp',
-    previewUrl: 'https://huggingface.co/hexgrad/Kokoro-82M/resolve/main/samples/HEARME.wav',
+    previewUrl: '/voice_sample/kokoro/af_bella.mp3',
   },
   {
     id: 'af_nicole',
@@ -41,7 +41,7 @@ export const KOKORO_VOICES: Voice[] = [
     gender: 'Female',
     accent: 'American',
     style: 'Calm, soothing, articulate',
-    previewUrl: 'https://huggingface.co/hexgrad/Kokoro-82M/resolve/main/samples/HEARME.wav',
+    previewUrl: '/voice_sample/kokoro/af_nicole.mp3',
   },
   {
     id: 'af_sarah',
@@ -50,7 +50,7 @@ export const KOKORO_VOICES: Voice[] = [
     gender: 'Female',
     accent: 'American',
     style: 'Professional, clear narrator',
-    previewUrl: 'https://huggingface.co/hexgrad/Kokoro-82M/resolve/main/samples/HEARME.wav',
+    previewUrl: '/voice_sample/kokoro/af_sarah.mp3',
   },
   {
     id: 'af_sky',
@@ -59,7 +59,7 @@ export const KOKORO_VOICES: Voice[] = [
     gender: 'Female',
     accent: 'American',
     style: 'Casual, friendly, smooth',
-    previewUrl: 'https://huggingface.co/hexgrad/Kokoro-82M/resolve/main/samples/HEARME.wav',
+    previewUrl: '/voice_sample/kokoro/af_sky.mp3',
   },
   {
     id: 'bf_emma',
@@ -68,7 +68,7 @@ export const KOKORO_VOICES: Voice[] = [
     gender: 'Female',
     accent: 'British',
     style: 'Formal, crisp, BBC narrator',
-    previewUrl: 'https://huggingface.co/hexgrad/Kokoro-82M/resolve/main/samples/HEARME.wav',
+    previewUrl: '/voice_sample/kokoro/bf_emma.mp3',
   },
   {
     id: 'am_adam',
@@ -77,7 +77,7 @@ export const KOKORO_VOICES: Voice[] = [
     gender: 'Male',
     accent: 'American',
     style: 'Deep, resonant, steady',
-    previewUrl: 'https://huggingface.co/hexgrad/Kokoro-82M/resolve/main/samples/HEARME.wav',
+    previewUrl: '/voice_sample/kokoro/am_adam.mp3',
   },
   {
     id: 'am_michael',
@@ -86,16 +86,16 @@ export const KOKORO_VOICES: Voice[] = [
     gender: 'Male',
     accent: 'American',
     style: 'Conversational, modern',
-    previewUrl: 'https://huggingface.co/hexgrad/Kokoro-82M/resolve/main/samples/HEARME.wav',
+    previewUrl: '/voice_sample/kokoro/am_michael.mp3',
   },
   {
-    id: 'am_george',
-    name: 'George',
+    id: 'am_fenrir',
+    name: 'Fenrir',
     engine: 'kokoro',
     gender: 'Male',
     accent: 'American',
     style: 'Rich, authoritative',
-    previewUrl: 'https://huggingface.co/hexgrad/Kokoro-82M/resolve/main/samples/HEARME.wav',
+    previewUrl: '/voice_sample/kokoro/am_fenrir.mp3',
   },
   {
     id: 'bm_george',
@@ -104,7 +104,7 @@ export const KOKORO_VOICES: Voice[] = [
     gender: 'Male',
     accent: 'British',
     style: 'Refined, articulate, deep',
-    previewUrl: 'https://huggingface.co/hexgrad/Kokoro-82M/resolve/main/samples/HEARME.wav',
+    previewUrl: '/voice_sample/kokoro/bm_george.mp3',
   },
   {
     id: 'bm_lewis',
@@ -113,7 +113,7 @@ export const KOKORO_VOICES: Voice[] = [
     gender: 'Male',
     accent: 'British',
     style: 'Warm, storytelling narrator',
-    previewUrl: 'https://huggingface.co/hexgrad/Kokoro-82M/resolve/main/samples/HEARME.wav',
+    previewUrl: '/voice_sample/kokoro/bm_lewis.mp3',
   },
   {
     id: 'bm_daniel',
@@ -122,7 +122,7 @@ export const KOKORO_VOICES: Voice[] = [
     gender: 'Male',
     accent: 'British',
     style: 'Formal, documentary style',
-    previewUrl: 'https://huggingface.co/hexgrad/Kokoro-82M/resolve/main/samples/HEARME.wav',
+    previewUrl: '/voice_sample/kokoro/bm_daniel.mp3',
   },
 ];
 
@@ -134,8 +134,7 @@ export const PIPER_VOICES: Voice[] = [
     gender: 'Female',
     accent: 'American',
     style: 'Natural, friendly, versatile',
-    previewUrl:
-      'https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/hfc_female/medium/samples/speaker_0.mp3',
+    previewUrl: '/voice_sample/piper/en_US-hfc_female-medium.mp3',
   },
   {
     id: 'en_US-lessac-medium',
@@ -144,8 +143,7 @@ export const PIPER_VOICES: Voice[] = [
     gender: 'Male',
     accent: 'American',
     style: 'Clear, audiobook style',
-    previewUrl:
-      'https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/lessac/medium/samples/speaker_0.mp3',
+    previewUrl: '/voice_sample/piper/en_US-lessac-medium.mp3',
   },
   {
     id: 'en_US-amy-medium',
@@ -154,8 +152,7 @@ export const PIPER_VOICES: Voice[] = [
     gender: 'Female',
     accent: 'American',
     style: 'Expressive, upbeat, distinct',
-    previewUrl:
-      'https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/amy/medium/samples/speaker_0.mp3',
+    previewUrl: '/voice_sample/piper/en_US-amy-medium.mp3',
   },
   {
     id: 'en_US-ryan-medium',
@@ -164,8 +161,7 @@ export const PIPER_VOICES: Voice[] = [
     gender: 'Male',
     accent: 'American',
     style: 'Dynamic, clear podcast tone',
-    previewUrl:
-      'https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/ryan/medium/samples/speaker_0.mp3',
+    previewUrl: '/voice_sample/piper/en_US-ryan-medium.mp3',
   },
   {
     id: 'en_US-danny-low',
@@ -174,8 +170,7 @@ export const PIPER_VOICES: Voice[] = [
     gender: 'Male',
     accent: 'American',
     style: 'Casual, conversational',
-    previewUrl:
-      'https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/danny/low/samples/speaker_0.mp3',
+    previewUrl: '/voice_sample/piper/en_US-danny-low.mp3',
   },
   {
     id: 'en_US-joe-medium',
@@ -184,8 +179,7 @@ export const PIPER_VOICES: Voice[] = [
     gender: 'Male',
     accent: 'American',
     style: 'Deep, relaxed baritone',
-    previewUrl:
-      'https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/joe/medium/samples/speaker_0.mp3',
+    previewUrl: '/voice_sample/piper/en_US-joe-medium.mp3',
   },
   {
     id: 'en_US-kristin-medium',
@@ -194,8 +188,7 @@ export const PIPER_VOICES: Voice[] = [
     gender: 'Female',
     accent: 'American',
     style: 'Melodic, gentle narrator',
-    previewUrl:
-      'https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/kristin/medium/samples/speaker_0.mp3',
+    previewUrl: '/voice_sample/piper/en_US-kristin-medium.mp3',
   },
   {
     id: 'en_US-kathleen-low',
@@ -204,8 +197,7 @@ export const PIPER_VOICES: Voice[] = [
     gender: 'Female',
     accent: 'American',
     style: 'Smooth, quiet, focused',
-    previewUrl:
-      'https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/kathleen/low/samples/speaker_0.mp3',
+    previewUrl: '/voice_sample/piper/en_US-kathleen-low.mp3',
   },
   {
     id: 'en_GB-alba-medium',
@@ -214,8 +206,7 @@ export const PIPER_VOICES: Voice[] = [
     gender: 'Female',
     accent: 'British',
     style: 'Contemporary, pleasant',
-    previewUrl:
-      'https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_GB/alba/medium/samples/speaker_0.mp3',
+    previewUrl: '/voice_sample/piper/en_GB-alba-medium.mp3',
   },
   {
     id: 'en_GB-alan-medium',
@@ -224,8 +215,7 @@ export const PIPER_VOICES: Voice[] = [
     gender: 'Male',
     accent: 'British',
     style: 'Articulate, precise, radio',
-    previewUrl:
-      'https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_GB/alan/medium/samples/speaker_0.mp3',
+    previewUrl: '/voice_sample/piper/en_GB-alan-medium.mp3',
   },
   {
     id: 'en_GB-southern_english_female-low',
@@ -234,18 +224,16 @@ export const PIPER_VOICES: Voice[] = [
     gender: 'Female',
     accent: 'British',
     style: 'Traditional RP, clear',
-    previewUrl:
-      'https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_GB/southern_english_female/low/samples/speaker_0.mp3',
+    previewUrl: '/voice_sample/piper/en_GB-southern_english_female-low.mp3',
   },
   {
-    id: 'en_GB-sweetpea-medium',
-    name: 'Sweetpea',
+    id: 'en_GB-semaine-medium',
+    name: 'Semaine',
     engine: 'piper',
     gender: 'Female',
     accent: 'British',
     style: 'Playful, expressive',
-    previewUrl:
-      'https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_GB/sweetpea/medium/samples/speaker_0.mp3',
+    previewUrl: '/voice_sample/piper/en_GB-semaine-medium.mp3',
   },
 ];
 

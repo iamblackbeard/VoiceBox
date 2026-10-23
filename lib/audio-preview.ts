@@ -9,6 +9,33 @@ export interface AudioPreviewState {
 type StateListener = (state: AudioPreviewState) => void;
 
 /**
+ * Resolves an audio URL. If given a relative path (e.g. '/voice_sample/...'),
+ * converts it to an extension URL using browser.runtime.getURL / chrome.runtime.getURL if available.
+ */
+export function resolveAudioUrl(url: string): string {
+  if (
+    !url ||
+    url.startsWith('http://') ||
+    url.startsWith('https://') ||
+    url.startsWith('blob:') ||
+    url.startsWith('data:')
+  ) {
+    return url;
+  }
+
+  try {
+    const b = (globalThis as any).browser ?? (globalThis as any).chrome;
+    if (typeof b?.runtime?.getURL === 'function') {
+      return b.runtime.getURL(url);
+    }
+  } catch {
+    // Fall back to relative URL
+  }
+
+  return url;
+}
+
+/**
  * Singleton AudioPreviewManager ensures only one voice sample audio
  * plays at any given time across the voice catalog, with graceful error handling.
  */
@@ -71,7 +98,8 @@ export class AudioPreviewManager {
     }
 
     try {
-      const audio = new Audio(url);
+      const resolvedUrl = resolveAudioUrl(url);
+      const audio = new Audio(resolvedUrl);
       audio.preload = 'auto';
       this.currentAudio = audio;
 
@@ -101,7 +129,7 @@ export class AudioPreviewManager {
           this.state = {
             voiceId,
             status: 'error',
-            errorMessage: 'Sample unavailable offline',
+            errorMessage: 'Sample audio could not be played',
           };
           this.currentAudio = null;
           this.notify();
@@ -114,7 +142,7 @@ export class AudioPreviewManager {
         this.state = {
           voiceId,
           status: 'error',
-          errorMessage: 'Sample unavailable offline',
+          errorMessage: 'Sample audio could not be played',
         };
         this.currentAudio = null;
         this.notify();

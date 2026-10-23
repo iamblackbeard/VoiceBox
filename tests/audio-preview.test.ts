@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { AudioPreviewManager } from '../lib/audio-preview';
+import { AudioPreviewManager, resolveAudioUrl } from '../lib/audio-preview';
 import { VOICES } from '../lib/voices';
 
 describe('AudioPreviewManager', () => {
@@ -14,6 +14,8 @@ describe('AudioPreviewManager', () => {
   afterEach(() => {
     manager.stop();
     globalThis.Audio = originalAudio;
+    delete (globalThis as any).browser;
+    delete (globalThis as any).chrome;
     vi.restoreAllMocks();
   });
 
@@ -63,7 +65,7 @@ describe('AudioPreviewManager', () => {
     }) as any;
 
     // Start playing Voice 1
-    await manager.play('af_heart', 'https://example.com/heart.wav');
+    await manager.play('af_heart', '/voice_sample/kokoro/af_heart.mp3');
     expect(manager.getState()).toEqual({
       voiceId: 'af_heart',
       status: 'playing',
@@ -71,7 +73,7 @@ describe('AudioPreviewManager', () => {
     expect(mockAudioInstances[0].play).toHaveBeenCalled();
 
     // Start playing Voice 2: Voice 1 should be paused/stopped
-    await manager.play('en_US-hfc_female-medium', 'https://example.com/hfc.mp3');
+    await manager.play('en_US-hfc_female-medium', '/voice_sample/piper/en_US-hfc_female-medium.mp3');
     expect(mockAudioInstances[0].pause).toHaveBeenCalled();
     expect(mockAudioInstances[0].currentTime).toBe(0);
     expect(manager.getState()).toEqual({
@@ -80,7 +82,7 @@ describe('AudioPreviewManager', () => {
     });
 
     // Clicking the same voice toggles pause
-    manager.play('en_US-hfc_female-medium', 'https://example.com/hfc.mp3');
+    manager.play('en_US-hfc_female-medium', '/voice_sample/piper/en_US-hfc_female-medium.mp3');
     expect(mockAudioInstances[1].pause).toHaveBeenCalled();
     expect(manager.getState().status).toBe('idle');
     expect(manager.getState().voiceId).toBeNull();
@@ -110,7 +112,7 @@ describe('AudioPreviewManager', () => {
       };
     }) as any;
 
-    await manager.play('af_bella', 'https://example.com/bella.wav');
+    await manager.play('af_bella', '/voice_sample/kokoro/af_bella.mp3');
     expect(manager.getState().voiceId).toBe('af_bella');
 
     // Simulate audio playback finishing
@@ -124,10 +126,10 @@ describe('AudioPreviewManager', () => {
     });
   });
 
-  it('handles offline or network errors gracefully with error message', async () => {
+  it('handles playback errors gracefully with error message', async () => {
     globalThis.Audio = vi.fn().mockImplementation(function () {
       return {
-        play: vi.fn().mockRejectedValue(new Error('Network error / offline')),
+        play: vi.fn().mockRejectedValue(new Error('Audio playback error')),
         pause: vi.fn(),
         currentTime: 0,
         onplay: null,
@@ -136,18 +138,40 @@ describe('AudioPreviewManager', () => {
       };
     }) as any;
 
-    await manager.play('af_sky', 'https://example.com/sky.wav');
+    await manager.play('af_sky', '/voice_sample/kokoro/af_sky.mp3');
 
     const state = manager.getState();
     expect(state.status).toBe('error');
     expect(state.voiceId).toBe('af_sky');
-    expect(state.errorMessage).toBe('Sample unavailable offline');
+    expect(state.errorMessage).toBe('Sample audio could not be played');
   });
 
-  it('validates that all 24 curated voice preview URLs have valid formats and extensions', () => {
+  it('resolves audio URL with browser/chrome runtime.getURL or fallback', () => {
+    // Relative URL without runtime
+    expect(resolveAudioUrl('/voice_sample/kokoro/af_heart.mp3')).toBe(
+      '/voice_sample/kokoro/af_heart.mp3',
+    );
+
+    // Absolute URLs untouched
+    expect(resolveAudioUrl('https://example.com/audio.mp3')).toBe(
+      'https://example.com/audio.mp3',
+    );
+
+    // With browser.runtime.getURL
+    (globalThis as any).browser = {
+      runtime: {
+        getURL: vi.fn((path: string) => `chrome-extension://dummy-id${path}`),
+      },
+    };
+    expect(resolveAudioUrl('/voice_sample/kokoro/af_heart.mp3')).toBe(
+      'chrome-extension://dummy-id/voice_sample/kokoro/af_heart.mp3',
+    );
+  });
+
+  it('validates that all 24 curated voice preview URLs point to local .mp3 sample files', () => {
     expect(VOICES).toHaveLength(24);
     for (const voice of VOICES) {
-      expect(voice.previewUrl).toMatch(/^https:\/\/.+\.(wav|mp3)$/i);
+      expect(voice.previewUrl).toMatch(/^\/voice_sample\/(kokoro|piper)\/.+\.mp3$/i);
     }
   });
 });

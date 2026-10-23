@@ -133,7 +133,7 @@ export const VoiceCard: React.FC<VoiceCardProps> = ({
             <div className="flex items-center justify-between gap-1">
               <span className="text-xs font-medium text-on-primary truncate">
                 {isLoading
-                  ? 'Buffering sample...'
+                  ? 'Loading sample...'
                   : isPlaying
                   ? 'Auditioning Voice'
                   : isError
@@ -152,16 +152,16 @@ export const VoiceCard: React.FC<VoiceCardProps> = ({
                 <span className="h-2 w-1 rounded-full bg-accent animate-pulse delay-150" />
                 <span className="h-4 w-1 rounded-full bg-accent animate-pulse delay-100" />
                 <span className="text-[10px] font-medium text-accent ml-1.5">
-                  Streaming audio preview
+                  Playing sample preview
                 </span>
               </div>
             ) : isError ? (
               <span className="text-[11px] text-amber-600 dark:text-amber-400 font-medium">
-                {errorMessage || 'Sample unavailable offline'}
+                {errorMessage || 'Sample audio could not be played'}
               </span>
             ) : (
               <span className="text-[10px] text-on-surface">
-                Instant stream • Zero model download
+                Instant local sample • Zero model download
               </span>
             )}
           </div>

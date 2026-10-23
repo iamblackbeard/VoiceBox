@@ -33,7 +33,7 @@ describe('voices configuration', () => {
       expect(['Female', 'Male']).toContain(v.gender);
       expect(['American', 'British']).toContain(v.accent);
       expect(v.style).toBeTruthy();
-      expect(v.previewUrl).toMatch(/^https:\/\//);
+      expect(v.previewUrl).toBe(`/voice_sample/${v.engine}/${v.id}.mp3`);
     }
   });
 
