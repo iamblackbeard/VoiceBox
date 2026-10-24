@@ -3,10 +3,10 @@ doc: prd
 status: approved
 ---
 
-# Local Voice Reader — Product Requirements
+# Voice Box — Product Requirements
 
 A privacy-first browser extension that reads selected web text aloud with a natural local voice, sentence by sentence, with the current sentence highlighted on the page. Built for people who want to listen to long text (like Reddit posts) instead of staring at a screen, without sending their text to any server.
-Source: `scope.md > The Unique Kernel`, `scope.md > Who It's For`. "Local Voice Reader" is a working title taken from the scope; the final name is an open question.
+Source: `scope.md > The Unique Kernel`, `scope.md > Who It's For`. "Voice Box" is a working title taken from the scope; the final name is an open question.
 
 ## The Core Journey
 1. The user is reading a webpage and selects a block of text.
@@ -145,7 +145,7 @@ Source: `scope.md > The Unique Kernel`.
 - No bundling the voice inside the extension — it is too large; it downloads on first use.
 
 ## Open Questions
-- Final product name (working title: "Local Voice Reader"). Can wait until the build.
+- Final product name (working title: "Voice Box"). Can wait until the build.
 - Highlight color on the page, and exact dark-theme colors. Can wait; the build can use the theme's named roles.
 - Which theme shows by default. Can wait.
 - Assumption (not a learner decision): the "Read Aloud" menu item only appears when text is selected.

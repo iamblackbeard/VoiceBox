@@ -3,7 +3,7 @@ doc: scope
 status: approved
 ---
 
-# Local Voice Reader
+# Voice Box
 
 A privacy-first, local text-to-speech browser extension that reads selected web text aloud with natural AI voices.
 

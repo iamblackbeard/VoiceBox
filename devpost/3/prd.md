@@ -3,7 +3,7 @@ doc: prd
 status: approved
 ---
 
-# Local Voice Reader — UX Polish & Interactive Companion (Milestone 3) — Product Requirements
+# Voice Box — UX Polish & Interactive Companion (Milestone 3) — Product Requirements
 
 A privacy-first local text-to-speech browser extension fine-tuned into an interactive reading companion. Features clickable sentence scrubbing that synchronizes side panel and on-page highlights, tab-origin awareness with instant tab switching, a collapsible mini-player, volume management, and zero-latency replay powered by in-memory audio chunk caching. Built for screen-fatigued, privacy-conscious readers navigating multi-tab workflows.
 Source: `scope.md > The Unique Kernel`, `scope.md > Who It's For`.

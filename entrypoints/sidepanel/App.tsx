@@ -94,7 +94,7 @@ export default function App() {
 
   return (
     <main className="mx-auto flex h-full max-w-md flex-col gap-4 bg-primary p-5 text-on-primary">
-      <h1 className="sr-only">Local Voice Reader</h1>
+      <h1 className="sr-only">Voice Box</h1>
 
       <Header
         reading={reading}
@@ -102,7 +102,7 @@ export default function App() {
         onClose={() => {
           try {
             player.pause();
-          } catch {}
+          } catch { }
           if (typeof window !== 'undefined' && typeof window.close === 'function') {
             window.close();
           }

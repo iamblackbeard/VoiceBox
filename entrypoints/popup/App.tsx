@@ -134,7 +134,7 @@ export default function App() {
       <header className="flex items-center justify-between border-b border-border pb-3">
         <div className="flex flex-col">
           <h1 className="text-sm font-semibold tracking-tight text-on-primary">
-            Local Voice Reader
+            Voice Box
           </h1>
           <span className="text-[11px] text-on-surface">TTS Engine Preference</span>
         </div>
@@ -144,24 +144,23 @@ export default function App() {
             id="recheck-webgpu-btn"
             onClick={handleRecheckWebGpu}
             disabled={isCheckingGpu}
-            className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium border transition-all cursor-pointer hover:opacity-80 active:scale-95 disabled:cursor-wait ${
-              hasWebGpu
+            className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium border transition-all cursor-pointer hover:opacity-80 active:scale-95 disabled:cursor-wait ${hasWebGpu
                 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
                 : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
-            }`}
+              }`}
             title={
               isCheckingGpu
                 ? 'Checking WebGPU availability...'
                 : hasWebGpu
-                ? 'WebGPU Ready (Click to re-check)'
-                : 'CPU Only (Click to re-check WebGPU)'
+                  ? 'WebGPU Ready (Click to re-check)'
+                  : 'CPU Only (Click to re-check WebGPU)'
             }
             aria-label={
               isCheckingGpu
                 ? 'Checking WebGPU availability'
                 : hasWebGpu
-                ? 'WebGPU Ready, click to re-check'
-                : 'CPU Only, click to re-check WebGPU'
+                  ? 'WebGPU Ready, click to re-check'
+                  : 'CPU Only, click to re-check WebGPU'
             }
           >
             {isCheckingGpu ? (
@@ -171,9 +170,8 @@ export default function App() {
               />
             ) : (
               <span
-                className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                  hasWebGpu ? 'bg-emerald-500' : 'bg-amber-500'
-                }`}
+                className={`w-1.5 h-1.5 rounded-full shrink-0 ${hasWebGpu ? 'bg-emerald-500' : 'bg-amber-500'
+                  }`}
               />
             )}
             <span>{hasWebGpu ? 'WebGPU Ready' : 'CPU Only'}</span>
@@ -200,11 +198,10 @@ export default function App() {
         <label
           htmlFor="engine-kokoro"
           onClick={() => handleSelectEngine('kokoro')}
-          className={`group flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
-            engine === 'kokoro'
+          className={`group flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${engine === 'kokoro'
               ? 'bg-surface border-accent shadow-xs'
               : 'border-border hover:bg-surface/50'
-          }`}
+            }`}
         >
           <div className="pt-0.5">
             <input
@@ -234,11 +231,10 @@ export default function App() {
         <label
           htmlFor="engine-piper"
           onClick={() => handleSelectEngine('piper')}
-          className={`group flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
-            engine === 'piper'
+          className={`group flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${engine === 'piper'
               ? 'bg-surface border-accent shadow-xs'
               : 'border-border hover:bg-surface/50'
-          }`}
+            }`}
         >
           <div className="pt-0.5">
             <input

@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scope: Local Voice Reader — Milestone 3 (UX Polish & Interactive Companion)</title>
+    <title>Scope: Voice Box — Milestone 3 (UX Polish & Interactive Companion)</title>
     <script type="module">
         import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
         mermaid.initialize({ startOnLoad: true, theme: 'dark' });
@@ -31,7 +32,9 @@
             max-width: 920px;
         }
 
-        h1, h2, h3 {
+        h1,
+        h2,
+        h3 {
             color: #ffffff;
             font-weight: 700;
         }
@@ -176,8 +179,15 @@
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(4px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(4px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         .mermaid-fallback {
@@ -188,22 +198,41 @@
             text-align: left;
         }
 
-        .no-js .mermaid { display: none; }
-        .no-js .mermaid-fallback { display: block; }
+        .no-js .mermaid {
+            display: none;
+        }
+
+        .no-js .mermaid-fallback {
+            display: block;
+        }
     </style>
 </head>
+
 <body>
     <script>document.body.classList.remove('no-js');</script>
-    <noscript><style>.mermaid { display: none; } .mermaid-fallback { display: block; }</style></noscript>
+    <noscript>
+        <style>
+            .mermaid {
+                display: none;
+            }
+
+            .mermaid-fallback {
+                display: block;
+            }
+        </style>
+    </noscript>
 
     <h1>
-        <span>Local Voice Reader</span>
+        <span>Voice Box</span>
         <span class="badge">Milestone 3 — UX Polish</span>
     </h1>
 
     <div class="kernel">
         <h2>The Unique Kernel</h2>
-        <p>Transforming the side panel from a passive audio readout into an interactive, synchronized reading companion: clickable sentence-level scrubbing that updates both side panel and webpage highlights in real time, tab-origin awareness with instant tab switching, a collapsible mini-player mode, volume control, and zero-latency replay powered by in-memory audio chunk caching.</p>
+        <p>Transforming the side panel from a passive audio readout into an interactive, synchronized reading companion:
+            clickable sentence-level scrubbing that updates both side panel and webpage highlights in real time,
+            tab-origin awareness with instant tab switching, a collapsible mini-player mode, volume control, and
+            zero-latency replay powered by in-memory audio chunk caching.</p>
     </div>
 
     <h2>Six Key Enhancements</h2>
@@ -211,67 +240,73 @@
         <div class="feature-card">
             <div class="feature-icon">🌓</div>
             <h4>Light & Dark Theme</h4>
-            <p>Unified sun/moon toggle at top-right of popup and side panel. Persisted in storage and strictly using semantic color tokens.</p>
+            <p>Unified sun/moon toggle at top-right of popup and side panel. Persisted in storage and strictly using
+                semantic color tokens.</p>
         </div>
         <div class="feature-card">
             <div class="feature-icon">🔊</div>
             <h4>Volume Control Popup</h4>
-            <p>Dedicated volume icon button at bottom right that reveals a smooth slider popover, matching the Speed control pattern.</p>
+            <p>Dedicated volume icon button at bottom right that reveals a smooth slider popover, matching the Speed
+                control pattern.</p>
         </div>
         <div class="feature-card">
             <div class="feature-icon">🏷️</div>
             <h4>Tab Origin & Focus</h4>
-            <p>Header displays which browser tab audio is reading from. Clicking the tab name immediately brings that tab back into focus.</p>
+            <p>Header displays which browser tab audio is reading from. Clicking the tab name immediately brings that
+                tab back into focus.</p>
         </div>
         <div class="feature-card">
             <div class="feature-icon">🗕</div>
             <h4>Collapsible Mini-Player</h4>
-            <p>One-click mini-player toggle that tucks away the full text reader into a compact strip while speech continues without pause.</p>
+            <p>One-click mini-player toggle that tucks away the full text reader into a compact strip while speech
+                continues without pause.</p>
         </div>
         <div class="feature-card">
             <div class="feature-icon">🔁</div>
             <h4>Instant Replay & Caching</h4>
-            <p>Play button becomes Replay at end of speech. In-memory chunk cache allows instant re-listening without re-generation lag.</p>
+            <p>Play button becomes Replay at end of speech. In-memory chunk cache allows instant re-listening without
+                re-generation lag.</p>
         </div>
         <div class="feature-card">
             <div class="feature-icon">👆</div>
             <h4>Clickable Sentences</h4>
-            <p>Side panel highlights sentences in sync with webpage. Clicking any sentence immediately seeks playback and moves page focus.</p>
+            <p>Side panel highlights sentences in sync with webpage. Clicking any sentence immediately seeks playback
+                and moves page focus.</p>
         </div>
     </div>
 
     <div class="diagram-container">
         <h3>Interactive Companion Flow</h3>
         <div class="mermaid">
-flowchart TD
-    subgraph Trigger["1. Reading Triggered"]
-        A[User Selects Text on Page] --> B[Right-Click 'Read Aloud']
-        B --> C[Open Side Panel with Saved Theme]
-    end
+            flowchart TD
+            subgraph Trigger["1. Reading Triggered"]
+            A[User Selects Text on Page] --> B[Right-Click 'Read Aloud']
+            B --> C[Open Side Panel with Saved Theme]
+            end
 
-    subgraph Header["2. Awareness & Theming"]
-        C --> D[Header Shows Origin Tab Title]
-        D -.->|Click Tab Header| D1[Bring Original Tab into Focus]
-        C --> E[Header Theme Toggle: Light / Dark]
-    end
+            subgraph Header["2. Awareness & Theming"]
+            C --> D[Header Shows Origin Tab Title]
+            D -.->|Click Tab Header| D1[Bring Original Tab into Focus]
+            C --> E[Header Theme Toggle: Light / Dark]
+            end
 
-    subgraph Content["3. Interactive Reading"]
-        C --> F[Sentence List Renders in Panel]
-        F --> G[Sentence Highlights in Sync with Audio & Webpage]
-        G -.->|Click Any Sentence| G1[Seek Playback & Move Page Highlight]
-    end
+            subgraph Content["3. Interactive Reading"]
+            C --> F[Sentence List Renders in Panel]
+            F --> G[Sentence Highlights in Sync with Audio & Webpage]
+            G -.->|Click Any Sentence| G1[Seek Playback & Move Page Highlight]
+            end
 
-    subgraph Controls["4. Playback & Minimization"]
-        C --> H[Bottom Controls: Speed, Play/Pause, Voice, Volume]
-        H -.->|Toggle Mini-Player| H1[Collapse Full View into Compact Strip]
-        H1 -.->|Continuous Audio| H2[Voice Stays Active Uninterrupted]
-    end
+            subgraph Controls["4. Playback & Minimization"]
+            C --> H[Bottom Controls: Speed, Play/Pause, Voice, Volume]
+            H -.->|Toggle Mini-Player| H1[Collapse Full View into Compact Strip]
+            H1 -.->|Continuous Audio| H2[Voice Stays Active Uninterrupted]
+            end
 
-    subgraph Completion["5. Cache & Replay"]
-        G --> I[Playback Completes]
-        I --> J[Play Button Transforms to Replay]
-        J -.->|Click Replay| K[Instant Restart from In-Memory Cache]
-    end
+            subgraph Completion["5. Cache & Replay"]
+            G --> I[Playback Completes]
+            I --> J[Play Button Transforms to Replay]
+            J -.->|Click Replay| K[Instant Restart from In-Memory Cache]
+            end
         </div>
         <div class="mermaid-fallback">
             <ol>
@@ -285,7 +320,7 @@ flowchart TD
     </div>
 
     <h2>Project Boundary</h2>
-    
+
     <div class="tabs">
         <button class="tab-btn active" onclick="showTab('now')">Now (Milestone 3 POC)</button>
         <button class="tab-btn" onclick="showTab('later')">Later</button>
@@ -302,17 +337,23 @@ flowchart TD
             <li>Clicking an earlier or later sentence to immediately seek audio and update the page highlight.</li>
             <li>Adjusting volume via the bottom-right popup slider.</li>
             <li>Collapsing the panel into a mini-player strip without interrupting audio, then expanding it back.</li>
-            <li>Reaching the end of the text, seeing the Replay button, and clicking it to replay instantly from cache.</li>
+            <li>Reaching the end of the text, seeing the Replay button, and clicking it to replay instantly from cache.
+            </li>
         </ul>
 
         <h3>Included in Scope</h3>
         <ul>
-            <li><strong>Theme Persistence</strong>: Light/Dark toggle in popup and side panel, stored in <code>browser.storage.local</code>, using semantic CSS tokens.</li>
-            <li><strong>Originating Tab Indicator</strong>: Side panel header shows origin tab title; clicking focuses that tab.</li>
-            <li><strong>Clickable Sentence Reader</strong>: Synced sentence highlighting in panel with click-to-seek jump.</li>
-            <li><strong>Collapsible Mini-Player</strong>: Side panel toggle shrinking reader to compact bar while audio plays.</li>
+            <li><strong>Theme Persistence</strong>: Light/Dark toggle in popup and side panel, stored in
+                <code>browser.storage.local</code>, using semantic CSS tokens.</li>
+            <li><strong>Originating Tab Indicator</strong>: Side panel header shows origin tab title; clicking focuses
+                that tab.</li>
+            <li><strong>Clickable Sentence Reader</strong>: Synced sentence highlighting in panel with click-to-seek
+                jump.</li>
+            <li><strong>Collapsible Mini-Player</strong>: Side panel toggle shrinking reader to compact bar while audio
+                plays.</li>
             <li><strong>Volume Control Popup</strong>: Bottom-right icon opening a volume slider popup.</li>
-            <li><strong>Replay & Caching</strong>: Replay button state; in-memory audio chunk caching (10-min TTL / clear on new reading / panel close).</li>
+            <li><strong>Replay & Caching</strong>: Replay button state; in-memory audio chunk caching (10-min TTL /
+                clear on new reading / panel close).</li>
         </ul>
     </div>
 
@@ -328,8 +369,10 @@ flowchart TD
     <div id="cut" class="tab-content">
         <h3>Explicitly Cut</h3>
         <ul>
-            <li><strong>Persistent on-disk audio caching</strong> (IndexedDB/OPFS): Cut to avoid disk bloat and ensure zero residual trace for privacy.</li>
-            <li><strong>Simultaneous multi-tab audio mixing</strong>: Cut to keep audio playback deterministic and avoid overlapping audio streams.</li>
+            <li><strong>Persistent on-disk audio caching</strong> (IndexedDB/OPFS): Cut to avoid disk bloat and ensure
+                zero residual trace for privacy.</li>
+            <li><strong>Simultaneous multi-tab audio mixing</strong>: Cut to keep audio playback deterministic and avoid
+                overlapping audio streams.</li>
         </ul>
     </div>
 
@@ -337,10 +380,11 @@ flowchart TD
         function showTab(tabId) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-            
+
             document.getElementById(tabId).classList.add('active');
             event.target.classList.add('active');
         }
     </script>
 </body>
+
 </html>

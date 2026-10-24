@@ -3,7 +3,7 @@ doc: spec
 status: approved
 ---
 
-# Local Voice Reader — Technical Spec
+# Voice Box — Technical Spec
 
 ## How This Works, In Plain Language
 Your extension has **three small pieces** that talk to each other by passing messages:
@@ -220,6 +220,6 @@ Listen/
 - **Demo browser:** assumed Chrome. The learner did not answer this.
 - **Default theme:** assumed to follow the OS, with no toggle. (PRD open question.)
 - **Highlight color** and **dark theme colors:** placeholders for now. (PRD open question.)
-- **Final product name:** working title "Local Voice Reader". (PRD open question.)
+- **Final product name:** working title "Voice Box". (PRD open question.)
 - **Assumption from PRD:** closing the panel stops the reading. This is designed in (panel→page connection) but must be tested in **Firefox**.
 - **Verify early:** Node version; Firefox sidebar generation in WXT; the model worker; `playbackRate` at 0.25x; Hugging Face downloads from an extension page (CORS and redirects); Custom Highlight API support in the target Firefox version.

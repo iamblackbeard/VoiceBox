@@ -192,7 +192,7 @@ export default function App() {
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/15 text-accent font-bold text-lg shadow-2xs">
-              🎙️
+              <img src="/icons/voice_48.png" alt="Logo" />
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -247,19 +247,17 @@ export default function App() {
             <button
               type="button"
               onClick={() => setActiveTab('kokoro')}
-              className={`flex items-center gap-2.5 rounded-xl px-4 py-2.5 text-xs font-bold transition-all cursor-pointer ${
-                activeTab === 'kokoro'
-                  ? 'bg-accent text-on-accent shadow-xs'
-                  : 'bg-surface text-on-surface hover:text-on-primary hover:bg-surface/80 border border-border'
-              }`}
+              className={`flex items-center gap-2.5 rounded-xl px-4 py-2.5 text-xs font-bold transition-all cursor-pointer ${activeTab === 'kokoro'
+                ? 'bg-accent text-on-accent shadow-xs'
+                : 'bg-surface text-on-surface hover:text-on-primary hover:bg-surface/80 border border-border'
+                }`}
             >
               <span>Kokoro (Neural / WebGPU)</span>
               <span
-                className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                  activeTab === 'kokoro'
-                    ? 'bg-on-accent/20 text-on-accent'
-                    : 'bg-primary text-on-surface'
-                }`}
+                className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${activeTab === 'kokoro'
+                  ? 'bg-on-accent/20 text-on-accent'
+                  : 'bg-primary text-on-surface'
+                  }`}
               >
                 {kokoroFavorites.length}/5 Favs
               </span>
@@ -268,19 +266,17 @@ export default function App() {
             <button
               type="button"
               onClick={() => setActiveTab('piper')}
-              className={`flex items-center gap-2.5 rounded-xl px-4 py-2.5 text-xs font-bold transition-all cursor-pointer ${
-                activeTab === 'piper'
-                  ? 'bg-accent text-on-accent shadow-xs'
-                  : 'bg-surface text-on-surface hover:text-on-primary hover:bg-surface/80 border border-border'
-              }`}
+              className={`flex items-center gap-2.5 rounded-xl px-4 py-2.5 text-xs font-bold transition-all cursor-pointer ${activeTab === 'piper'
+                ? 'bg-accent text-on-accent shadow-xs'
+                : 'bg-surface text-on-surface hover:text-on-primary hover:bg-surface/80 border border-border'
+                }`}
             >
               <span>Piper (Fast / CPU)</span>
               <span
-                className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                  activeTab === 'piper'
-                    ? 'bg-on-accent/20 text-on-accent'
-                    : 'bg-primary text-on-surface'
-                }`}
+                className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${activeTab === 'piper'
+                  ? 'bg-on-accent/20 text-on-accent'
+                  : 'bg-primary text-on-surface'
+                  }`}
               >
                 {piperFavorites.length}/5 Favs
               </span>
@@ -323,11 +319,10 @@ export default function App() {
                 key={g}
                 type="button"
                 onClick={() => setGenderFilter(g)}
-                className={`rounded-md px-2.5 py-1 text-xs font-medium transition cursor-pointer ${
-                  genderFilter === g
-                    ? 'bg-accent text-on-accent'
-                    : 'bg-primary text-on-surface hover:text-on-primary border border-border'
-                }`}
+                className={`rounded-md px-2.5 py-1 text-xs font-medium transition cursor-pointer ${genderFilter === g
+                  ? 'bg-accent text-on-accent'
+                  : 'bg-primary text-on-surface hover:text-on-primary border border-border'
+                  }`}
               >
                 {g}
               </button>
@@ -342,11 +337,10 @@ export default function App() {
                 key={a}
                 type="button"
                 onClick={() => setAccentFilter(a)}
-                className={`rounded-md px-2.5 py-1 text-xs font-medium transition cursor-pointer ${
-                  accentFilter === a
-                    ? 'bg-accent text-on-accent'
-                    : 'bg-primary text-on-surface hover:text-on-primary border border-border'
-                }`}
+                className={`rounded-md px-2.5 py-1 text-xs font-medium transition cursor-pointer ${accentFilter === a
+                  ? 'bg-accent text-on-accent'
+                  : 'bg-primary text-on-surface hover:text-on-primary border border-border'
+                  }`}
               >
                 {a}
               </button>

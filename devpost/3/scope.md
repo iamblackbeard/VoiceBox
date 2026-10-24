@@ -3,7 +3,7 @@ doc: scope
 status: approved
 ---
 
-# Local Voice Reader — UX Polish & Interactive Companion (Milestone 3)
+# Voice Box — UX Polish & Interactive Companion (Milestone 3)
 
 A privacy-first local text-to-speech extension fine-tuned with interactive sentence scrubbing, tab-aware controls, collapsible mini-player, volume management, and persistent light/dark themes.
 

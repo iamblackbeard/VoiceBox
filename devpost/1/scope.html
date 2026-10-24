@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scope: Local Voice Reader</title>
+    <title>Scope: Voice Box</title>
     <script type="module">
         import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
         mermaid.initialize({ startOnLoad: true, theme: 'dark' });
@@ -30,7 +31,9 @@
             margin: 0 auto;
         }
 
-        h1, h2, h3 {
+        h1,
+        h2,
+        h3 {
             color: #ffffff;
             margin-top: 2rem;
         }
@@ -119,7 +122,7 @@
             color: var(--accent-hover);
             font-weight: 600;
         }
-        
+
         .warning-box {
             background-color: rgba(245, 158, 11, 0.1);
             border-left: 4px solid var(--warning-color);
@@ -129,8 +132,15 @@
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(5px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(5px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         /* Fallback for mermaid if JS fails */
@@ -142,49 +152,71 @@
             text-align: left;
         }
 
-        .no-js .mermaid { display: none; }
-        .no-js .mermaid-fallback { display: block; }
+        .no-js .mermaid {
+            display: none;
+        }
+
+        .no-js .mermaid-fallback {
+            display: block;
+        }
     </style>
 </head>
+
 <body>
     <script>document.body.classList.remove('no-js');</script>
-    <noscript><style>.mermaid { display: none; } .mermaid-fallback { display: block; }</style></noscript>
+    <noscript>
+        <style>
+            .mermaid {
+                display: none;
+            }
 
-    <h1>Local Voice Reader</h1>
+            .mermaid-fallback {
+                display: block;
+            }
+        </style>
+    </noscript>
+
+    <h1>Voice Box</h1>
 
     <div class="kernel">
         <h2>The Unique Kernel</h2>
-        <p>Using local AI models for high-quality natural voices, while cleverly chunking the text sentence-by-sentence to provide synchronized sentence-level highlighting without complex audio-timing alignment. It features intelligent hardware acceleration detection (using <strong>WebGPU</strong> when available, falling back to <strong>WASM</strong>) and gives the user a choice between <span class="highlight">Kokoro</span> and <span class="highlight">Piper</span> models based on their hardware capabilities.</p>
+        <p>Using local AI models for high-quality natural voices, while cleverly chunking the text sentence-by-sentence
+            to provide synchronized sentence-level highlighting without complex audio-timing alignment. It features
+            intelligent hardware acceleration detection (using <strong>WebGPU</strong> when available, falling back to
+            <strong>WASM</strong>) and gives the user a choice between <span class="highlight">Kokoro</span> and <span
+                class="highlight">Piper</span> models based on their hardware capabilities.</p>
     </div>
 
     <h2>Who It's For & Why</h2>
-    <p>Users who want to listen to long documents or Reddit posts to avoid screen fatigue, but are highly privacy-conscious and do not want their browsing context sent to external servers. It solves a personal need to reduce eye strain while refusing to compromise on data privacy.</p>
+    <p>Users who want to listen to long documents or Reddit posts to avoid screen fatigue, but are highly
+        privacy-conscious and do not want their browsing context sent to external servers. It solves a personal need to
+        reduce eye strain while refusing to compromise on data privacy.</p>
 
     <div class="diagram-container">
         <h3>The Core Loop</h3>
         <div class="mermaid">
             flowchart TD
-                subgraph Popup["Extension Popup (Configuration)"]
-                    P1([User Opens Popup]) --> P2{Check WebGPU}
-                    P2 -->|Available| P3[Select Engine]
-                    P2 -->|Missing| P4[Show Warning: "Wgpu not found, Piper is recommended"]
-                    P4 --> P3
-                    P3 -->|User Chooses Kokoro or Piper| P5[Save Configuration]
-                end
-                
-                subgraph Webpage["Webpage Context"]
-                    W1([User Selects text]) --> W2[Right-clicks & "Read Aloud"]
-                end
-                
-                subgraph SidePanel["Side Panel (Playback)"]
-                    W2 --> S1[Open Side Panel]
-                    S1 --> S2[Initialize Local Model]
-                    S2 --> S3[Read Aloud & Highlight Sentence]
-                    S3 --> S4[Pre-cache Next Sentences]
-                    S4 --> S3
-                end
-                
-                P5 -.-> W1
+            subgraph Popup["Extension Popup (Configuration)"]
+            P1([User Opens Popup]) --> P2{Check WebGPU}
+            P2 -->|Available| P3[Select Engine]
+            P2 -->|Missing| P4[Show Warning: "Wgpu not found, Piper is recommended"]
+            P4 --> P3
+            P3 -->|User Chooses Kokoro or Piper| P5[Save Configuration]
+            end
+
+            subgraph Webpage["Webpage Context"]
+            W1([User Selects text]) --> W2[Right-clicks & "Read Aloud"]
+            end
+
+            subgraph SidePanel["Side Panel (Playback)"]
+            W2 --> S1[Open Side Panel]
+            S1 --> S2[Initialize Local Model]
+            S2 --> S3[Read Aloud & Highlight Sentence]
+            S3 --> S4[Pre-cache Next Sentences]
+            S4 --> S3
+            end
+
+            P5 -.-> W1
         </div>
         <div class="mermaid-fallback">
             <strong>Core Loop Flow:</strong>
@@ -199,7 +231,7 @@
     </div>
 
     <h2>Project Boundary</h2>
-    
+
     <div class="tabs">
         <button class="tab-btn active" onclick="showTab('now')">Now (POC)</button>
         <button class="tab-btn" onclick="showTab('later')">Later</button>
@@ -208,8 +240,11 @@
 
     <div id="now" class="tab-content active">
         <h3>What "Working" Looks Like</h3>
-        <p>A demo where a user first selects their engine (Kokoro or Piper) in the extension popup, seeing a warning recommending Piper if WebGPU is disabled. Then, a paragraph on a webpage is selected, right-clicked, and read aloud. A side panel opens providing playback controls. The screen visibly shows the current sentence highlighted, moving to the next sentence seamlessly as the chosen local engine continues reading.</p>
-        
+        <p>A demo where a user first selects their engine (Kokoro or Piper) in the extension popup, seeing a warning
+            recommending Piper if WebGPU is disabled. Then, a paragraph on a webpage is selected, right-clicked, and
+            read aloud. A side panel opens providing playback controls. The screen visibly shows the current sentence
+            highlighted, moving to the next sentence seamlessly as the chosen local engine continues reading.</p>
+
         <h3>Included in Scope</h3>
         <ul>
             <li>Extension popup for engine selection (Kokoro vs Piper).</li>
@@ -243,10 +278,11 @@
         function showTab(tabId) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-            
+
             document.getElementById(tabId).classList.add('active');
             event.target.classList.add('active');
         }
     </script>
 </body>
+
 </html>

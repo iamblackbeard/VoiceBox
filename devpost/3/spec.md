@@ -3,7 +3,7 @@ doc: spec
 status: approved
 ---
 
-# Local Voice Reader — UX Polish & Interactive Companion (Milestone 3) — Technical Spec
+# Voice Box — UX Polish & Interactive Companion (Milestone 3) — Technical Spec
 
 ## How This Works, In Plain Language
 
