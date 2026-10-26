@@ -145,8 +145,8 @@ export default function App() {
             onClick={handleRecheckWebGpu}
             disabled={isCheckingGpu}
             className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium border transition-all cursor-pointer hover:opacity-80 active:scale-95 disabled:cursor-wait ${hasWebGpu
-                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
-                : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+              ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+              : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
               }`}
             title={
               isCheckingGpu
@@ -199,8 +199,8 @@ export default function App() {
           htmlFor="engine-kokoro"
           onClick={() => handleSelectEngine('kokoro')}
           className={`group flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${engine === 'kokoro'
-              ? 'bg-surface border-accent shadow-xs'
-              : 'border-border hover:bg-surface/50'
+            ? 'bg-surface border-accent shadow-xs'
+            : 'border-border hover:bg-surface/50'
             }`}
         >
           <div className="pt-0.5">
@@ -232,8 +232,8 @@ export default function App() {
           htmlFor="engine-piper"
           onClick={() => handleSelectEngine('piper')}
           className={`group flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${engine === 'piper'
-              ? 'bg-surface border-accent shadow-xs'
-              : 'border-border hover:bg-surface/50'
+            ? 'bg-surface border-accent shadow-xs'
+            : 'border-border hover:bg-surface/50'
             }`}
         >
           <div className="pt-0.5">
@@ -289,7 +289,8 @@ export default function App() {
       </button>
 
       {/* Tab Navigation Policy */}
-      <section className="flex flex-col gap-1.5" aria-label="Tab Navigation Policy">
+      {/*}
+      <section className="flex flex-col gap-1.5" aria-label ="Tab Navigation Policy">
         <span className="text-[11px] font-semibold text-on-surface uppercase tracking-wider">
           When reading tab is closed
         </span>
@@ -312,7 +313,7 @@ export default function App() {
           ))}
         </div>
       </section>
-
+      */}
       {/* Footer / Status Note */}
       <footer className="pt-1 flex items-center justify-between text-[10px] text-on-surface">
         <span>Instant save</span>
